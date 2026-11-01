@@ -1,0 +1,164 @@
+{
+  "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "name": "独立站创建（对话式 Agent）",
+  "nodes": [
+    {
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {
+        "mode": "hostedChat",
+        "public": true,
+        "authentication": "none",
+        "initialMessages": "你好！我是你的建站助手 🛠️ 想做一个什么样的独立站？先告诉我它的名字和大概用途吧～",
+        "agentName": "建站助手",
+        "agentDescription": "帮你从零搭建并部署独立站，会主动推荐风格与技术方案",
+        "suggestedPrompts": {},
+        "options": {}
+      },
+      "webhookId": "3b300aea-23e6-531b-b663-fa68950fdef5"
+    },
+    {
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [
+        340,
+        480
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "你是一个专业的独立站（indie site）搭建助手，用中文与用户对话。\n\n你的目标：通过**自然、轻松的一问一答**收集建站所需信息，并在合适的时候给出专业推荐，最后调用「生成站点」工具真正把站点做出来。\n\n【信息收集】（一次只问 1 个问题，循序渐进，不要一次性列清单）\n1. 站点名称、一句话定位（它做什么）\n2. 目标用户 / 受众\n3. 语言（默认英文 en；中文站用 zh-CN）\n4. 变现模式：free / ads / donation / freemium / subscription / lifetime\n5. 工具 / 功能清单（每个工具一行：名称|slug|说明）\n6. 视觉风格偏好\n\n【主动推荐】（这是你的核心增值点）\n- UI 风格在以下 5 种里推荐，并解释理由：\n · minimal 简洁（通用、工具站）\n · bold 大胆（创意 / 设计向，强对比）\n · playful 活泼（儿童 / 娱乐 / 游戏，圆角配色）\n · glassmorphism 玻璃拟态（SaaS / 企业，显专业）\n · midnight 深色高端（金融 / 严肃场景）\n  你可以提示用户打开预览对比（宿主 8788 端口，如 http://localhost:8788/preview?style=midnight ）。\n- 默认推荐 Claude 作为 Coding Agent 提供方（也可选 codex / opencode）。\n\n【收尾动作】\n当你已经拿到「站点名称 + 定位 + 至少一个工具 + 视觉风格」后，调用「生成站点」工具，把收集到的字段全部传入：\nname, tagline, language, audience, keywords, tools, monetization, currency, style, agentProvider, agentModel(可选), modelBaseUrl(可选), agentExtra(可选)。\n\n如果用户中途想知道进度或想直接改某一项，按他说的调整即可。语气亲切、像朋友，不要啰嗦。"
+        }
+      }
+    },
+    {
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        340,
+        160
+      ],
+      "parameters": {
+        "model": {
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CRED_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        340,
+        800
+      ],
+      "parameters": {
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 5
+      }
+    },
+    {
+      "name": "Tool: 生成站点",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        700,
+        480
+      ],
+      "parameters": {
+        "name": "生成站点",
+        "description": "当你已收集到足够信息（站点名称、定位、至少一个工具/功能、视觉风格）后调用，真正生成独立站。参数：name(站点名称), tagline(一句话定位), language(en/zh-CN/ja), audience(目标用户), keywords(关键词逗号分隔), tools(工具清单每行 名称|slug|说明), monetization(free/ads/donation/freemium/subscription/lifetime), currency(USD/CNY), style(minimal/bold/playful/glassmorphism/midnight), agentProvider(claude/codex/opencode), agentModel(可选模型), modelBaseUrl(可选自定义模型地址), agentExtra(可选额外指令)。",
+        "source": "workflowSelector",
+        "workflowId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "workflowInputs": {
+          "mappingMode": "auto"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        []
+      ],
+      "ai_languageModel": [
+        [
+          {
+            "node": "OpenAI Chat Model",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "Simple Memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "Tool: 生成站点",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": null,
+    "instanceId": null
+  },
+  "versionId": "00000000-0000-0000-0000-000000000013",
+  "pinData": {},
+  "tags": [
+    {
+      "name": "indie-site-builder"
+    },
+    {
+      "name": "create"
+    },
+    {
+      "name": "agent"
+    },
+    {
+      "name": "chat"
+    }
+  ]
+}

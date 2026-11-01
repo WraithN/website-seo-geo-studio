@@ -1,0 +1,613 @@
+{
+  "name": "独立站快速部署上线",
+  "nodes": [
+    {
+      "name": "Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {
+        "formTitle": "独立站部署上线",
+        "formDescription": "填入已生成的站点 slug 与目标平台，自动构建并部署（可绑定域名）。与「创建流程」解耦，可独立运行。",
+        "formSubmittedText": "已收到，正在构建并部署…",
+        "path": "deploy",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "站点 slug *",
+              "fieldType": "string",
+              "requiredField": true,
+              "fieldName": "slug",
+              "description": "创建流程生成的目录名，例如 my-chinese-name"
+            },
+            {
+              "fieldLabel": "部署目标",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "target",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "仅本地构建 none",
+                    "value": "none"
+                  },
+                  {
+                    "option": "Vercel",
+                    "value": "vercel"
+                  },
+                  {
+                    "option": "Cloudflare Pages",
+                    "value": "cloudflare"
+                  }
+                ],
+                "mode": "list"
+              },
+              "defaultValue": "vercel"
+            },
+            {
+              "fieldLabel": "域名（部署时绑定，可留空）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "domain"
+            },
+            {
+              "fieldLabel": "项目名（可选，默认用 slug）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "project"
+            },
+            {
+              "fieldLabel": "Cloudflare Account ID（可选）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "accountId"
+            },
+            {
+              "fieldLabel": "部署 Token（可选，否则用容器内已登录凭证）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "token",
+              "password": true
+            },
+            {
+              "fieldLabel": "Git 远程仓库（可选，留空则不推送）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "gitRemote",
+              "description": "例如 https://github.com/you/repo.git 或 git@github.com:you/repo.git"
+            },
+            {
+              "fieldLabel": "Git 分支",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "gitBranch",
+              "defaultValue": "main"
+            },
+            {
+              "fieldLabel": "仅演练不真正发布 (dryRun)",
+              "fieldType": "boolean",
+              "requiredField": false,
+              "fieldName": "dryRun"
+            }
+          ]
+        }
+      },
+      "webhookId": "deploy"
+    },
+    {
+      "name": "Code: Resolve",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst slug = (f.slug||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'site';\nconst dir = '/home/node/sites/' + slug;\nconst hostDir = 'C:/Users/nathon.wang/WorkBuddy/2026-10-26-00-00-50/n8n-indie-builder/sites/' + slug;\nreturn [{ json: {\n  slug, dir, hostDir,\n  target: f.target || 'none',\n  domain: f.domain || '',\n  project: f.project || '',\n  accountId: f.accountId || '',\n  token: f.token || '',\n  gitRemote: f.gitRemote || '',\n  gitBranch: f.gitBranch || 'main',\n  dryRun: !!f.dryRun\n} }];"
+      }
+    },
+    {
+      "name": "HTTP: Build",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        360
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"via\": \"docker\", \"timeout\": 1800, \"command\": \"if [ -d \" + $json.dir + \" ]; then cd \" + $json.dir + \" && npm install --no-audit --no-fund 2>&1 | tail -5 && npm run build 2>&1 | tail -40 && echo BUILD_OK; else echo DIR_MISSING; exit 3; fi\" } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Code: Check Build",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $('HTTP: Build').first().json;\nconst r = $('Code: Resolve').first().json;\nconst out = String(b.stdout || b.stderr || '');\nconst dirMissing = out.includes('DIR_MISSING');\nconst ok = !dirMissing && ((b.exitCode === 0) || out.includes('BUILD_OK'));\nreturn [{ json: Object.assign({}, r, {\n  dirMissing, buildOk: ok,\n  buildLog: out.slice(-2500)\n}) }];"
+      }
+    },
+    {
+      "name": "IF: Dir Missing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.dirMissing }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "IF: Build OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.buildOk }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "IF: Need Git",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.gitRemote }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "HTTP: Git Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"via\": \"docker\", \"cwd\": $json.dir, \"timeout\": 600, \"command\": \"git init -q 2>/dev/null; git add -A; git -c user.email=n8n@local -c user.name=n8n commit -m n8n-auto-deploy -q 2>&1 | tail -3; git push \" + $json.gitRemote + \" HEAD:\" + $json.gitBranch + \" 2>&1 | tail -10\" } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Code: Build Deploy Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $('Code: Resolve').first().json;\nconst dir = r.dir, t = r.target, tok = r.token || '';\n// 工作目录由 bridge /run 的 cwd 传入，命令里不要再拼 cd\nlet cmd = '';\nif (t === 'vercel') {\n  cmd = (tok ? 'VERCEL_TOKEN=' + tok + ' ' : '')\n      + 'vercel deploy --prod --yes'\n      + (r.project ? ' --name ' + r.project : '')\n      + (r.domain ? ' --domains ' + r.domain : '')\n      + ' 2>&1';\n} else if (t === 'cloudflare') {\n  cmd = (tok ? 'CLOUDFLARE_API_TOKEN=' + tok + ' ' : '')\n      + (r.accountId ? 'CLOUDFLARE_ACCOUNT_ID=' + r.accountId + ' ' : '')\n      + 'wrangler pages deploy dist --project-name ' + (r.project || r.slug)\n      + ' --commit-dirty=true --branch ' + (r.gitBranch || 'main')\n      + ' 2>&1';\n}\nif (r.dryRun && cmd) cmd = 'echo \"DRYRUN: ' + cmd.replace(/\"/g, \"'\") + '\"';\nreturn [{ json: Object.assign({}, r, { deployCommand: cmd }) }];"
+      }
+    },
+    {
+      "name": "IF: Target none",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.target }}",
+              "rightValue": "none",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "HTTP: Deploy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2560,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"via\": \"docker\", \"cwd\": $json.dir, \"command\": $json.deployCommand, \"timeout\": 1800 } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Code: Summarize Deploy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $('Code: Resolve').first().json;\nconst d = $('HTTP: Deploy').all();\nlet out = '', ok = false, deployed = false;\nif (d.length) {\n  deployed = true;\n  out = String(d[0].json.stdout || d[0].json.stderr || '');\n  ok = (d[0].json.exitCode === 0);\n}\nconst urls = out.match(/https?:\\/\\/[^\\s)'\"<>]+/g) || [];\nconst url = urls.length ? urls[urls.length - 1]\n  : (r.target === 'cloudflare' ? 'https://' + (r.project || r.slug) + '.pages.dev'\n     : r.target === 'vercel' ? 'https://' + (r.project || r.slug) + '.vercel.app'\n     : '(仅本地构建，未部署)');\nlet dns = [];\nif (r.domain) {\n  dns.push(r.target === 'vercel'\n    ? 'CNAME  ' + r.domain + '  ->  cname.vercel-dns.com'\n    : 'CNAME  ' + r.domain + '  ->  ' + (r.project || r.slug) + '.pages.dev');\n}\nconst status = r.target === 'none' ? '本地构建完成（未部署）'\n  : r.dryRun ? '演练完成（未真正发布）'\n  : (deployed ? (ok ? '部署成功' : '部署失败') : '未执行部署');\nreturn [{ json: {\n  slug: r.slug, target: r.target, hostDir: r.hostDir,\n  url, dns: dns.join('\\n'), status,\n  log: ($('Code: Check Build').first().json.buildLog || '').slice(-900)\n       + (out ? '\\n--- deploy ---\\n' + out.slice(-2000) : '')\n} }];"
+      }
+    },
+    {
+      "name": "Form: Done",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.2,
+      "position": [
+        3040,
+        360
+      ],
+      "parameters": {
+        "formTitle": "🚀 独立站部署结果",
+        "formDescription": "slug：{{ $json.slug }}（宿主目录 {{ $json.hostDir }}）\\n目标平台：{{ $json.target }}\\n状态：{{ $json.status }}\\n访问地址：{{ $json.url }}\\nDNS 记录：\\n{{ $json.dns }}\\n\\n构建/部署日志：\\n{{ $json.log }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "备注（可选）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "note"
+            }
+          ]
+        }
+      },
+      "webhookId": "f4db4e11-f665-5f6f-b1f1-ad2beb6f4a70"
+    },
+    {
+      "name": "Form: Missing",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        700
+      ],
+      "parameters": {
+        "formTitle": "⚠️ 找不到工程目录",
+        "formDescription": "容器内未在 {{ $json.dir }} 找到工程（宿主对应 {{ $json.hostDir }}）。\\n请先用「独立站快速创建」流程生成，或确认 slug 是否正确。",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "备注（可选）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "note"
+            }
+          ]
+        }
+      },
+      "webhookId": "21fb6578-528c-57fa-91bf-bfe06046e1cc"
+    },
+    {
+      "name": "Form: Build Failed",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        700
+      ],
+      "parameters": {
+        "formTitle": "❌ 构建失败",
+        "formDescription": "工程 {{ $json.slug }} 构建未通过，已中止部署。\\n\\n构建日志：\\n{{ $json.buildLog }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "备注（可选）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "note"
+            }
+          ]
+        }
+      },
+      "webhookId": "a0f86135-e9a4-50d6-b1ef-2452ff0473f9"
+    }
+  ],
+  "connections": {
+    "Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code: Resolve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Resolve": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Build",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Build": {
+      "main": [
+        [
+          {
+            "node": "Code: Check Build",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Check Build": {
+      "main": [
+        [
+          {
+            "node": "IF: Dir Missing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Dir Missing": {
+      "main": [
+        [
+          {
+            "node": "Form: Missing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Build OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Build OK": {
+      "main": [
+        [
+          {
+            "node": "IF: Need Git",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form: Build Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Need Git": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Git Push",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Build Deploy Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Git Push": {
+      "main": [
+        [
+          {
+            "node": "Code: Build Deploy Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Deploy Command": {
+      "main": [
+        [
+          {
+            "node": "IF: Target none",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Target none": {
+      "main": [
+        [
+          {
+            "node": "Code: Summarize Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Deploy": {
+      "main": [
+        [
+          {
+            "node": "Code: Summarize Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Summarize Deploy": {
+      "main": [
+        [
+          {
+            "node": "Form: Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": null,
+    "instanceId": null
+  },
+  "versionId": "00000000-0000-0000-0000-000000000011",
+  "pinData": {},
+  "tags": [
+    {
+      "name": "indie-site-builder"
+    },
+    {
+      "name": "deploy"
+    }
+  ]
+}

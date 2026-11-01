@@ -1,0 +1,760 @@
+{
+  "name": "独立站建站流水线 (indie-site-builder)",
+  "nodes": [
+    {
+      "name": "Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        520
+      ],
+      "parameters": {
+        "formTitle": "新建独立站 · 需求收集",
+        "formDescription": "填写要建的独立站信息，提交后自动走完：线框图 → 选风格 → 生成工程 → 编码补全 → 一键发布。",
+        "formSubmittedText": "已收到，正在生成…",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "站点名称 *",
+              "fieldType": "string",
+              "requiredField": true,
+              "fieldName": "name"
+            },
+            {
+              "fieldLabel": "英文 slug（留空自动生成）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "slug"
+            },
+            {
+              "fieldLabel": "一句话定位",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "tagline"
+            },
+            {
+              "fieldLabel": "语言",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "language",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "英文 en",
+                    "value": "en"
+                  },
+                  {
+                    "option": "中文 zh-CN",
+                    "value": "zh-CN"
+                  },
+                  {
+                    "option": "日文 ja",
+                    "value": "ja"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "目标用户",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "audience"
+            },
+            {
+              "fieldLabel": "关键词（逗号分隔）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "keywords"
+            },
+            {
+              "fieldLabel": "工具清单（每行：名称|slug|说明）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "tools"
+            },
+            {
+              "fieldLabel": "变现模式",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "monetization",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "免费 free",
+                    "value": "free"
+                  },
+                  {
+                    "option": "广告 ads",
+                    "value": "ads"
+                  },
+                  {
+                    "option": "捐赠 donation",
+                    "value": "donation"
+                  },
+                  {
+                    "option": "免费+付费 freemium",
+                    "value": "freemium"
+                  },
+                  {
+                    "option": "订阅 subscription",
+                    "value": "subscription"
+                  },
+                  {
+                    "option": "买断 lifetime",
+                    "value": "lifetime"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "货币",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "currency",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "USD",
+                    "value": "USD"
+                  },
+                  {
+                    "option": "CNY",
+                    "value": "CNY"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "主题色",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "theme",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "indigo",
+                    "value": "indigo"
+                  },
+                  {
+                    "option": "emerald",
+                    "value": "emerald"
+                  },
+                  {
+                    "option": "sunset",
+                    "value": "sunset"
+                  },
+                  {
+                    "option": "midnight",
+                    "value": "midnight"
+                  },
+                  {
+                    "option": "ocean",
+                    "value": "ocean"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "域名（部署时绑定，可留空）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "domain"
+            },
+            {
+              "fieldLabel": "部署目标",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "deployTarget",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "仅本地构建 none",
+                    "value": "none"
+                  },
+                  {
+                    "option": "Vercel",
+                    "value": "vercel"
+                  },
+                  {
+                    "option": "Cloudflare Pages",
+                    "value": "cloudflare"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "生成线框图图片（需配图像API）",
+              "fieldType": "boolean",
+              "requiredField": false,
+              "fieldName": "generateImage"
+            },
+            {
+              "fieldLabel": "用 AI 辅助选择 UI 风格",
+              "fieldType": "boolean",
+              "requiredField": false,
+              "fieldName": "useAI"
+            }
+          ]
+        },
+        "path": "new-site"
+      }
+    },
+    {
+      "name": "Code: Wireframe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst tools = String(f.tools || '').split('\\n').map(s=>s.trim()).filter(Boolean)\n  .map(line => { const p = line.split('|').map(x=>x.trim()); return { n: p[0]||p[1]||'Tool', slug: p[1]||'', desc: p[2]||'' }; });\nconst name = f.name || 'My Site';\nconst wf = `# 线框图：${name}\n## 页面结构\n1. Header / 导航（Logo、工具、定价、博客、语言）\n2. Hero（标题、定位、主 CTA「免费开始」）\n3. 工具网格（${tools.length||'N'} 个工具卡片，hover 预览）\n4. 使用步骤 How-it-works（3 步）\n5. 定价 / 变现（${f.monetization||'ads'}）\n6. FAQ（结构化数据）\n7. Footer（合规链接）\n## 数据流向\n表单提交 → 桥接服务 /generate → 工程目录 → /complete 编码补全 → /publish 发布`;\nreturn [{ json: { wireframe: wf, name, tagline: f.tagline, audience: f.audience } }];"
+      }
+    },
+    {
+      "name": "IF: Generate Image",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        320,
+        760
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.generateImage }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "HTTP: Wireframe Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        760
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.IMAGE_API_URL || 'https://api.openai.com/v1/images/generations' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"model\": \"gpt-image-1\", \"prompt\": \"Clean wireframe mockup of a SaaS indie tool site: \" + $json.name + \". Minimal box layout, no color.\", \"n\": 1, \"size\": \"1024x1024\" } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "Code: Recommend Style",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst aud = String(f.audience||'').toLowerCase();\nconst mon = String(f.monetization||'ads');\nlet style='minimal', rationale='通用简洁风格，适配大多数工具站', palette='#5b34e6 / #f8fafc';\nif (/child|kid|儿童|玩|fun|game/.test(aud)) { style='playful'; rationale='目标含儿童/娱乐，用活泼配色与圆角'; palette='#8b6ef0 / #8b6ef0'; }\nelse if (/financ|crypto|投资|money|bank/.test(aud)) { style='midnight'; rationale='金融/严肃场景，深色高端感'; palette='#4a25c9 / #5b34e6'; }\nelse if (/creativ|design|艺术|portfolio/.test(aud)) { style='bold'; rationale='创意向，强对比大胆视觉'; palette='#5b34e6 / #5b34e6'; }\nelse if (/saas|professional|企业|business|团队/.test(aud)) { style='glassmorphism'; rationale='SaaS/企业，玻璃拟态显专业'; palette='#8b6ef0 / #fffdf9'; }\nif ((mon==='subscription'||mon==='freemium') && style==='minimal') style='glassmorphism';\nreturn [{ json: { recommendedStyle: style, rationale, palette, style } }];"
+      }
+    },
+    {
+      "name": "IF: Use AI",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        520
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.useAI }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "HTTP: AI Style",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1260,
+        360
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL || 'https://api.openai.com/v1/chat/completions' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"model\": $env.LLM_MODEL || 'gpt-4o-mini', \"temperature\": 0.3, \"messages\": [ {\"role\":\"system\",\"content\":\"你是资深 UI 设计顾问。只返回 JSON：{\\\"style\\\":\\\"minimal|bold|playful|glassmorphism|midnight\\\",\\\"rationale\\\":\\\"一句话理由\\\"}\"}, {\"role\":\"user\",\"content\":\"站点：\"+ $json.name +\" 目标用户：\"+ $('Form Trigger').first().json.audience +\" 变现：\"+ $('Form Trigger').first().json.monetization +\" 已有推荐：\"+ $json.recommendedStyle +\"。请确认或修正风格。\"} ] } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "Code: Parse AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $('HTTP: AI Style').first().json;\nlet style = $('Code: Recommend Style').first().json.recommendedStyle;\nlet rationale = 'AI 辅助建议';\ntry {\n  const content = (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content) || '';\n  const m = content.match(/\\{[\\s\\S]*\\}/);\n  if (m) { const j = JSON.parse(m[0]); if (j.style) style = j.style; if (j.rationale) rationale = j.rationale; }\n} catch (e) {}\nreturn [{ json: { style, recommendedStyle: style, rationale, aiUsed: true } }];"
+      }
+    },
+    {
+      "name": "Form: Confirm UI Style",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.2,
+      "position": [
+        1860,
+        520
+      ],
+      "parameters": {
+        "formTitle": "选择 UI 设计风格",
+        "formDescription": "AI / 规则推荐：{{ $json.recommendedStyle }} —— {{ $json.rationale }}（配色 {{ $json.palette }}）。可保持或切换。",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "最终 UI 风格",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldName": "style",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Minimal 简洁",
+                    "value": "minimal"
+                  },
+                  {
+                    "option": "Bold 大胆",
+                    "value": "bold"
+                  },
+                  {
+                    "option": "Playful 活泼",
+                    "value": "playful"
+                  },
+                  {
+                    "option": "Glassmorphism 玻璃拟态",
+                    "value": "glassmorphism"
+                  },
+                  {
+                    "option": "Midnight 深色高端",
+                    "value": "midnight"
+                  }
+                ],
+                "mode": "list"
+              },
+              "defaultValue": "={{ $json.style }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Code: Build Spec",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst c = $('Form: Confirm UI Style').first().json;\nconst style = c.style || 'minimal';\nconst slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'site';\nconst tools = String(f.tools||'').split('\\n').map(s=>s.trim()).filter(Boolean).map(line=>{\n  const p = line.split('|').map(x=>x.trim());\n  const slug = slugify(p[1]||p[0]||'tool');\n  return { name: p[0]||p[1]||'Tool', slug, desc: p[2]||'', icon:'⚙️', keywords:[] };\n});\nconst themeMap = { minimal:'indigo', bold:'sunset', playful:'emerald', glassmorphism:'ocean', midnight:'midnight' };\nconst slug = f.slug ? slugify(f.slug) : slugify(f.name||'site');\nconst spec = {\n  name: f.name, slug, domain: f.domain || '', tagline: f.tagline||'',\n  lang: f.language || 'en', theme: themeMap[style] || 'ocean',\n  audience: String(f.audience||'').split(',').map(s=>s.trim()).filter(Boolean),\n  keywords: String(f.keywords||'').split(',').map(s=>s.trim()).filter(Boolean),\n  tools,\n  monetization: { model: f.monetization||'ads', currency: f.currency||'USD' },\n  legal: { email: '', jurisdiction: 'global' },\n  deploy: { target: f.deployTarget||'none' }\n};\nconst outDir = 'C:/Users/nathon.wang/WorkBuddy/2026-10-26-00-00-50/n8n-indie-builder/sites/' + slug;\nreturn [{ json: { spec, outDir, build: false, style } }];"
+      }
+    },
+    {
+      "name": "HTTP: /generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2500,
+        520
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "HTTP: /complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2820,
+        520
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "HTTP: /publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3140,
+        520
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"dir\": $json.dir, \"target\": $('Form Trigger').first().json.deployTarget, \"domain\": $('Form Trigger').first().json.domain } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "Set: Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3460,
+        520
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "name",
+              "type": "string",
+              "value": "={{ $('Form Trigger').first().json.name }}"
+            },
+            {
+              "id": "2",
+              "name": "style",
+              "type": "string",
+              "value": "={{ $('Form: Confirm UI Style').first().json.style }}"
+            },
+            {
+              "id": "3",
+              "name": "url",
+              "type": "string",
+              "value": "={{ $('HTTP: /publish').first().json.url || '(本地构建，未部署)' }}"
+            },
+            {
+              "id": "4",
+              "name": "dns",
+              "type": "string",
+              "value": "={{ ($('HTTP: /publish').first().json.dns || []).join('\\n') }}"
+            },
+            {
+              "id": "5",
+              "name": "dir",
+              "type": "string",
+              "value": "={{ $('HTTP: /publish').first().json.dir }}"
+            },
+            {
+              "id": "6",
+              "name": "status",
+              "type": "string",
+              "value": "={{ $('HTTP: /publish').first().json.ok ? '成功' : '失败' }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Form: Done",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.2,
+      "position": [
+        3780,
+        520
+      ],
+      "parameters": {
+        "formTitle": "🎉 独立站已生成",
+        "formDescription": "站点：{{ $json.name }}\\n风格：{{ $json.style }}\\n状态：{{ $json.status }}\\n访问地址：{{ $json.url }}\\n工程目录：{{ $json.dir }}\\nDNS 记录：\\n{{ $json.dns }}\\n\\n下一步：在 n8n 外打开工程目录，npm install && npm run dev 本地预览；如需真实发布，在表单里填域名并选 Vercel/Cloudflare 重新跑一次。",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "备注（可选）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "note"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code: Wireframe",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF: Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Wireframe": {
+      "main": [
+        [
+          {
+            "node": "Code: Recommend Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Recommend Style": {
+      "main": [
+        [
+          {
+            "node": "IF: Use AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Use AI": {
+      "main": [
+        [
+          {
+            "node": "HTTP: AI Style",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form: Confirm UI Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: AI Style": {
+      "main": [
+        [
+          {
+            "node": "Code: Parse AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Parse AI": {
+      "main": [
+        [
+          {
+            "node": "Form: Confirm UI Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form: Confirm UI Style": {
+      "main": [
+        [
+          {
+            "node": "Code: Build Spec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Spec": {
+      "main": [
+        [
+          {
+            "node": "HTTP: /generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: /generate": {
+      "main": [
+        [
+          {
+            "node": "HTTP: /complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: /complete": {
+      "main": [
+        [
+          {
+            "node": "HTTP: /publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: /publish": {
+      "main": [
+        [
+          {
+            "node": "Set: Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Summary": {
+      "main": [
+        [
+          {
+            "node": "Form: Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Generate Image": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Wireframe Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "HTTP: Wireframe Image": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": null,
+    "instanceId": null
+  },
+  "versionId": "00000000-0000-0000-0000-000000000001",
+  "pinData": {},
+  "tags": [
+    {
+      "name": "indie-site-builder"
+    },
+    {
+      "name": "automation"
+    }
+  ]
+}

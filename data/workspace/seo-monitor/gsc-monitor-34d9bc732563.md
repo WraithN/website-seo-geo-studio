@@ -1,0 +1,131 @@
+# GSC 监控与机会识别
+
+- 技能套件：监控与回流
+- 任务：gsc-monitor
+- 生成时间：2026/10/31 07:36:26
+- 数据来源：**真实采集**（baidu-suggest）
+
+## 采集证据
+> 本次执行真实采集到的原始数据，产结论时以此为事实依据。
+
+- 采集来源：baidu-suggest
+- 真实联想词（3 条）：
+  - rhythm trainer 安卓版
+  - rhythm trainer 下载
+  - rhythmtrainer节奏训练器
+
+## checklist
+> GSC 检查项数组，每项 {item, howToCheck, whyItMatters}
+
+- - item: GSC 属性与数据可用性确认
+  - howToCheck: 先调用 list_sites 确认站点属性格式（sc-domain:rhythmtrainer.com 或 https://rhythmtrainer.com/），再调用 query_search_analytics 拉取近 28 天数据；注意 GSC 有约 3 天延迟，日期窗口需回算（endDate = 今天-3 天）。
+  - whyItMatters: 属性格式错误或数据未就绪会导致后续所有检查失效；域属性与 URL 前缀属性覆盖范围不同，直接影响数据完整性。
+- - item: 近 28 天总览基线
+  - howToCheck: 用 query_search_analytics 分别以 dimensions=[query] 和 dimensions=[page] 拉取近 28 天 clicks/impressions/ctr/position，各取 Top25，记录总点击、总展示、平均 CTR、平均位置作为基线。
+  - whyItMatters: 没有基线就无法判断后续掉量、机会词、自相残杀的严重程度；也是周报/月报的对比锚点。
+- - item: 28 天 vs 前 28 天时段对比
+  - howToCheck: 调用 compare_performance，4 个日期参数设为近 28 天与前 28 天，dimension=page 和 dimension=query 各跑一次，按点击变化排序取 top movers。
+  - whyItMatters: 这是本方案的核心对比周期，能直接定位掉量页面与上升词，是告警与动作的触发源。
+- - item: 临近排名机会（位置 5-20）
+  - howToCheck: 调用 find_keyword_opportunities，参数 minImpressions 设为有统计意义的阈值（如 100，需按站点体量调整）、maxCtr 设 0.05、maxPosition 设 20，再人工筛 position>=5 的词。
+  - whyItMatters: 位置 5-20 且高曝光低 CTR 的词是标题/描述微调即可涨流量的快赢，投入产出比最高。
+- - item: 高曝光低 CTR 词
+  - howToCheck: 从 query_search_analytics 结果中筛 impressions 高于站点中位数、ctr 低于站点平均 CTR 的词，结合 SERP 判断是否被富摘要/竞品挤压。
+  - whyItMatters: 曝光已有但点击未转化，说明标题、meta 描述或 SERP 呈现有问题，修复成本低于新建内容。
+- - item: 新出现查询
+  - howToCheck: 调用 compare_performance 近 28 天窗口，过滤 previousClicks=0 且本期有展示/点击的词，按当前点击排序。
+  - whyItMatters: 新词揭示新兴需求（如联想词中的“安卓版”“下载”），可指导内容与落地页方向。
+- - item: 内容衰退（90 天窗口）
+  - howToCheck: 调用 compare_performance，90 天窗口，dimension=page，筛出点击与展示同时下降的页面，排除季节性波动后按降幅评级。
+  - whyItMatters: 同时下降才是真衰退（单指标下降可能是 CTR 或排名波动），需优先排查技术或内容老化问题。
+- - item: 关键词自相残杀
+  - howToCheck: 调用 query_search_analytics，dimensions=[query,page]，筛同一 query 出现在 >=2 个页面的组合，对比各页点击/位置确定赢家页与输家页。
+  - whyItMatters: 多页争同一词会稀释权重、拉低整体排名，需归并或差异化定位。
+- - item: 索引覆盖抽查
+  - howToCheck: 调用 inspect_url 逐条检查重点页（上限 20 条/次防限流），优先查掉量页、新发布页、疑似重复页，记录 coverage_state、indexing_state、last_crawled。
+  - whyItMatters: 掉量有时不是排名问题而是索引丢失或抓取失败，需先排除技术原因。
+- - item: 品牌 vs 非品牌拆分
+  - howToCheck: 先与用户确认品牌词（如 rhythm trainer、rhythmtrainer、节奏训练器），再调用 analyze_brand_queries 传入 brandTerms 数组，拆分品牌词流量占比。
+  - whyItMatters: 品牌词流量占比过高会掩盖真实新客获取能力；品牌词必须由用户确认，不可臆测。
+- - item: 联想词覆盖检查
+  - howToCheck: 将真实联想词（rhythm trainer 安卓版、rhythm trainer 下载、rhythmtrainer节奏训练器）作为查询词，用 get_keyword_trend 或 query_search_analytics 过滤查看站点是否已有对应排名页。
+  - whyItMatters: 联想词代表真实搜索需求，若站点无对应落地页或排名靠后，即为明确的内容/页面缺口。
+
+## strikingDistance
+> 临近排名机会（位置 5-20）识别方法与筛选条件
+
+筛选条件：position 在 5-20 之间（第 2-3 页边缘，微调即可进首页）、impressions 高于站点中位数或设定绝对阈值（建议 >=100，按站点体量调整）、ctr 低于站点平均 CTR。执行方式：调用 find_keyword_opportunities（minImpressions=100、maxCtr=0.05、maxPosition=20），再在结果中筛 position>=5，按 impressions 降序排列。优先级排序：位置 5-10 且高曝光 > 位置 11-15 > 位置 16-20；同时结合联想词（安卓版、下载、节奏训练器）判断是否为商业意图词，意图越强优先级越高。注意：以上阈值需导入 GSC 真实数据后按站点实际体量校准，当前无数据，具体机会词数量与名单未知。
+
+## cannibalization
+> 自相残杀检测方法与处理建议
+
+检测方法：调用 query_search_analytics，dimensions=[query,page]，对每个 query 统计出现的不同 page 数，筛出 >=2 个页面的 query；对每组对比各页的 clicks、impressions、position，点击与位置最优的为赢家页，其余为输家页。辅助判断：若两页 URL 主题高度重叠（如 /download 与 /android-download）、或内链锚文本互相指向同一词，则自相残杀嫌疑更高。处理建议：1) 赢家页保留并强化内链与内容深度；2) 输家页若内容重复则 301 归并到赢家页；3) 若两页定位确实不同（如“下载”页 vs “安卓版”页），则差异化标题与正文，明确各自目标词，并在输家页内链指向赢家页；4) 归并后通过 inspect_url 确认索引状态，观察 2-4 周排名变化。当前无真实数据，具体冲突词对未知，需导入 GSC 数据后执行。
+
+## alerts
+> 应配置的告警数组
+
+- - name: 页面点击骤降
+  - condition: 单页近 28 天点击较前 28 天下降 >50%
+  - severity: CRITICAL
+  - action: 立即排查索引状态（inspect_url）、排名变化与竞品动态
+- - name: 页面点击下滑
+  - condition: 单页近 28 天点击较前 28 天下降 20%-50%
+  - severity: WARNING
+  - action: 检查标题/描述是否被改、CTR 是否下降、是否有新竞品占位
+- - name: 关键词掉出前 20
+  - condition: 原位置 <=10 的词本期位置 >20
+  - severity: WARNING
+  - action: 核查对应页面索引与内容相关性，评估是否被自相残杀稀释
+- - name: 高曝光低 CTR 机会词
+  - condition: impressions >= 阈值 且 ctr < 站点平均 CTR 的 50% 且 position 5-20
+  - severity: INFO
+  - action: 进入机会词清单，安排标题与 meta 描述优化
+- - name: 自相残杀新增
+  - condition: 同一 query 出现 >=2 个页面且本期新增冲突
+  - severity: WARNING
+  - action: 确定赢家页，对输家页做归并或差异化
+- - name: 索引异常
+  - condition: 重点页 coverage_state 非“已提交并编入索引”或 last_crawled 超过 30 天
+  - severity: CRITICAL
+  - action: 检查 robots、canonical、sitemap 与服务器抓取日志
+- - name: 内容衰退
+  - condition: 90 天窗口内页面点击与展示同时下降且降幅 >30%
+  - severity: WARNING
+  - action: 评估内容时效性，安排更新或合并
+- - name: 品牌词占比异常
+  - condition: 品牌词点击占比环比波动 >15 个百分点
+  - severity: INFO
+  - action: 复核品牌词列表与流量结构，区分新客需求变化
+
+## actions
+> 本周期建议动作数组
+
+- - step: 1
+  - action: 确认 GSC 属性格式并拉取近 28 天与前 28 天基线数据
+  - detail: 调用 list_sites 确认属性，再跑 query_search_analytics 与 compare_performance，落盘原始数据到 seo-workspace/reports/。当前无真实数据，需导入 GSC 数据后执行。
+- - step: 2
+  - action: 生成临近排名机会清单
+  - detail: 跑 find_keyword_opportunities（minImpressions=100、maxCtr=0.05、maxPosition=20），筛 position 5-20，按曝光降序输出 Top 清单，标注商业意图。
+- - step: 3
+  - action: 核查联想词覆盖缺口
+  - detail: 针对 rhythm trainer 安卓版、rhythm trainer 下载、rhythmtrainer节奏训练器 三个真实联想词，检查站点是否已有对应排名页；若无或位置 >20，列入内容/落地页新建或优化计划。
+- - step: 4
+  - action: 执行自相残杀检测并定处理方案
+  - detail: 跑 dimensions=[query,page] 分析，输出冲突词对、赢家页/输家页，给出 301 归并或差异化建议。
+- - step: 5
+  - action: 排查掉量页技术原因
+  - detail: 对点击下降 >20% 的页面逐条 inspect_url（单次上限 20 条），确认索引与抓取状态，排除技术因素后再归因内容或排名。
+- - step: 6
+  - action: 配置告警规则
+  - detail: 将 alerts 数组中的规则接入 monitor.py 监控引擎，设定阈值与通知渠道，形成“监控→诊断→修复”闭环。
+- - step: 7
+  - action: 产出周期报告
+  - detail: 按 seo-report 的 weekly/monthly 模板生成报告，文件名 seo-report-YYYY-MM-DD-{domain}-{type}.md，落到 seo-workspace/reports/ 供建站工具定时读取。
+
+## 其他输出
+
+### __missing
+
+
+### __fieldCompliance
+100%

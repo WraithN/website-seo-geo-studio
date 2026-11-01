@@ -1,0 +1,37 @@
+{
+  "name": "seo-geo-studio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SEO/GEO 流量获客工作室：把 53 个 SEO 技能、建站页面与 n8n 工作流统一收纳进 React + TS + SQLite 工程",
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c magenta,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "cross-env NODE_OPTIONS=--experimental-sqlite tsx watch server/src/index.ts",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "cross-env NODE_OPTIONS=--experimental-sqlite tsx server/src/index.ts",
+    "import": "cross-env NODE_OPTIONS=--experimental-sqlite tsx server/src/import/importData.ts",
+    "preview": "vite preview --port 4173"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0"
+  }
+}

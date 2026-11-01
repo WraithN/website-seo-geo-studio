@@ -1,0 +1,84 @@
+{
+  "name": "外链推广（R21 锚文本规划 + R22 客座文章）",
+  "nodes": [
+    {
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "webhookId": "d583125f-92f3-4708-8905-fb0d5385d679",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "backlink",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "name": "Code: Generate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\nlet inp = {};\ntry { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString().trim();\nconst product = (inp.product || inp.name || 'Site').toString().trim() || 'Site';\nlet ptype = (inp.productType || 'tool').toString().toLowerCase();\nlet market = (inp.market || 'us').toString().toLowerCase();\nconst domain = (inp.domain || '').toString().trim() || (product.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '.com');\nconst stage = (inp.stage || 'launch').toString();\nlet keywords = inp.targetKeywords || inp.keywords || [];\nif (typeof keywords === 'string') keywords = keywords.split(/[,，;；\\n]+/);\nkeywords = (keywords || []).map(s => String(s).trim()).filter(Boolean).slice(0, 8);\nif (!keywords.length) keywords = [product];\nlet competitors = inp.competitors || [];\nif (typeof competitors === 'string') competitors = competitors.split(/[,，;；\\s]+/);\ncompetitors = (competitors || []).map(s => String(s).trim()).filter(Boolean).slice(0, 6);\nconst kw0 = keywords[0];\nfunction slugify(t){ return (t||'').toLowerCase().trim().replace(/['\"]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'site'; }\nfunction esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }\n\n// ---- 锚文本安全配比（R21）----\nconst ANCHOR_MIX = [\n  ['品牌词', 35, '品牌名 / 品牌名+官网', '最安全，撑起品牌搜索量，Google 最信任的锚文本'],\n  ['裸链', 22, 'https://' + domain, '自然链接形态，论坛/目录/引用场景大量出现'],\n  ['部分匹配', 18, '这款 ' + kw0 + ' 工具 / ' + kw0 + ' 使用技巧', '关键词含在自然句式中，兼顾相关性与安全'],\n  ['通用词', 15, '点击这里 / 了解更多 / 这个工具', '真实外链的常态，稀释优化痕迹'],\n  ['精确匹配', 10, kw0, '权重最高但风险最大，新站前 6 个月严格 ≤10%'],\n];\nconst anchorPlan = ANCHOR_MIX.map(a => ({name:a[0], share:a[1]/100, sharePct:a[1], example:a[2], note:a[3]}));\n\n// ---- 渠道清单（R21）----\nconst channels = [\n  {name:'产品目录站（BetaList / AlternativeTo / SaaSHub / Toolify 等）', type:'目录提交', value:4, ease:5, anchor:'品牌词 + 裸链', how:'逐个提交产品页，填满简介/截图/链接；多数免费、当天收录，是最稳的第一批外链。'},\n  {name:'「best ' + kw0 + ' tools」榜单文 / 聚合文', type:'榜单收录', value:5, ease:3, anchor:'部分匹配', how:'找出排名 10-30 的榜单文，邮件 pitch 提供试用/素材，争取收录。'},\n  {name:'行业垂直社区（Reddit / V2EX / HackerNews / ProductHunt）', type:'社区讨论', value:4, ease:3, anchor:'裸链 + 品牌词', how:'先贡献价值再发链；PH 发售日集中冲榜（配合终身买断档引爆）。'},\n  {name:'客座博客 / 行业站投稿', type:'客座文章', value:5, ease:2, anchor:'作者 bio 品牌词 + 正文部分匹配', how:'用 pitch 模板冷邮件站长；每篇 1 条正文内链 + bio 回链，绝不堆精确匹配。'},\n  {name:'资源页 / 工具页收录（Resource page link building）', type:'资源页', value:4, ease:3, anchor:'部分匹配 / 通用词', how:'搜「' + kw0 + ' resources / useful tools」类页面，pitch 把自己列入；成功率高。'},\n  {name:'Broken link building（断链修复）', type:'断链替换', value:3, ease:3, anchor:'部分匹配', how:'找行业文里 404 的链接，礼貌告知并推荐自己的同类内容替换。'},\n  {name:'数字 PR / 数据引用（原创调研、统计页）', type:'数字公关', value:5, ease:1, anchor:'品牌词 + 裸链', how:'产出行业数据/统计页（配程序化内容），媒体引用自然带链，是 DR 提速器。'},\n  {name:'HARO / 专家问答选题', type:'媒体选题', value:4, ease:3, anchor:'品牌词（署名带链接）', how:'订阅记者选题邮件，快速给出专家观点；中选即权威媒体外链。'},\n  {name:'播客 / Newsletter 互推 / 联合订阅', type:'内容合作', value:3, ease:3, anchor:'品牌词', how:'同量级产品互换 newsletter 位/播客访谈，双方各得曝光与外链。'},\n  {name:'开源 / 教程回链（GitHub awesome 列表、教程文）', type:'开发者生态', value:3, ease:4, anchor:'裸链 + 部分匹配', how:'把产品列入 awesome 列表；写官方教程被课程/教程文引用。'},\n];\nif (ptype === 'tool') channels.push({name:'工具目录站（Toolify / There\\'s An AI For That）', type:'类型专属', value:5, ease:5, anchor:'品牌词', how:'工具站高相关目录，优先提交。'});\nif (ptype === 'saas') channels.push({name:'对比文（X vs Y / ' + kw0 + ' alternative）', type:'类型专属', value:5, ease:3, anchor:'部分匹配', how:'对比文是 SaaS 最强转化外链，逐篇 pitch 收录。'});\nif (ptype === 'mobile-app') channels.push({name:'App 榜单与合集文 / 少数派 / ProductHunt', type:'类型专属', value:5, ease:4, anchor:'品牌词', how:'App 合集文转化高，发售期集中曝光。'});\nif (market === 'cn') channels.push({name:'国内垂直社区（少数派 / 知乎 / 小红书 / V2EX）', type:'社区种草', value:4, ease:3, anchor:'品牌词', how:'以使用体验/教程形式软性露出。'});\nchannels.forEach(c => { c.priority = Math.round((c.value * 2 + c.ease) * 10) / 10; });\nchannels.sort((a,b) => b.priority - a.priority);\n\n// ---- 竞品外链画像（R21）----\nconst competitorProfile = {\n  benchmark: { referringDomains: '50–400', backlinks: '500–8000', domainRating: '25–60',\n    topSourceTypes: ['工具目录站','博客教程文','「best X tools」榜单文','论坛/Reddit 讨论'] },\n  competitors: competitors.length ? competitors : ['（未提供竞品域名——建议填 2-3 个直接竞品拉外链画像）'],\n  replicateChecklist: [\n    '导出竞品 top 100 引用域名，按 DR 降序，先抄「目录站 + 榜单文」这类可复制来源。',\n    '过滤出 dofollow 且 DR≥30 的来源，人工 pitch 同类收录（比冷启动省 50% 时间）。',\n    '记录竞品锚文本分布，对照安全配比，精确匹配若 >15% 即是你的追赶窗口。',\n    '补出竞品有排名而你缺的长尾页，制造「值得被链」的资产。',\n  ],\n};\n\n// ---- R22 推广模板 ----\nconst templates = {\n  pitchGuest: '主题：客座文章投稿建议 —— 一篇关于「' + kw0 + '」的实操指南\\n\\n您好：\\n\\n我是 ' + product + ' 的负责人。长期读贵站，您那篇《……》对我启发很大。\\n\\n想投稿一篇《（按对方选题定制）》：\\n- 目标读者：正在寻找 ' + kw0 + ' 解决方案的独立开发者 / 中小团队\\n- 大纲：3 个实操要点 + 1 个真实案例 + 可下载清单\\n- 约 1200-1500 词，原创首发给贵站\\n\\n文中自然提及我们的工具时会附一条链接（' + domain + '），署名 bio 可回链主页。\\n如方向合适，我可以在 3 天内交初稿。谢谢考虑！\\n\\n你的名字 · ' + product + '\\n' + domain,\n  pitchResource: '主题：一个可加入您「资源页」的免费工具\\n\\n您好：\\n\\n注意到贵站的资源页《资源页》整理得很用心。我们做了 ' + product + '（' + domain + '），是一个免费的 ' + kw0 + ' 工具，和已收录条目同类但更轻量上手更快。\\n\\n如合适希望能加入清单：\\n- 一句话简介：一句话说清价值\\n- 链接：' + domain + '\\n\\n无论是否收录都很感谢这份整理。\\n\\n你的名字',\n  pitchBroken: '主题：您文章里的一个链接失效了（附替代建议）\\n\\n您好：\\n\\n读您《文章名》时发现文中《失效资源》链接已 404（位置：第 X 段），怕影响读者体验特此提醒。\\n\\n我们刚好有一篇同类内容（' + domain + '/assets/xx），信息更新且更完整，若合适可作替代。\\n\\n你的名字',\n  pitchMedia: '主题：选题 —— 专家观点供稿\\n\\n您好：\\n\\n看到贵媒体在征集「行业趋势」的观点。我是 ' + product + '（' + domain + '）的负责人，长期做 ' + kw0 + ' 方向，可提供 2-3 条可引用专家观点（可配 1 组独家小数据），署名带主页链接。\\n\\n素材可在 24 小时内提供。\\n\\n你的名字',\n  guestOutline: '客座文章大纲模板\\n标题：' + kw0 + ' 完整指南：从入门到 3 个真实场景\\n引言：痛点共鸣 + 读完能学到什么\\n一、' + kw0 + ' 常见误区（3 点，每点配例子）\\n二、实操步骤（分步 + 截图/清单）\\n   （第 2 步自然植入 ' + product + '：场景是「……」时可用它一键完成，附链接 ' + domain + '）\\n三、真实案例 / 前后对比\\n四、可下载清单 / 模板\\n结尾：行动号召 + 邀请留言\\n（正文内链 1 条为上限；作者 bio 用品牌词回链）',\n  bio: '作者 bio（带锚文本回流，安全配比）：\\n\\n「你的名字 是 ' + product + '（<a href=\"https://' + domain + '\">' + product + '</a>）的创始人，专注于帮助独立开发者更高效地完成 ' + kw0 + '。」\\n\\n要点：bio 锚文本用【品牌词】；正文提及产品用【部分匹配】；同页不要放两条精确匹配。',\n};\n\n// ---- 90 天节奏 ----\nconst rhythm = [\n  {phase:'第 1–30 天 · 打底', items:['完成全部目录站提交（ease≥4 先做），拿到首批 20-40 条品牌词/裸链。','锁定 10 个「榜单文/资源页」目标，用 pitch 模板，目标收录 3-5 条。','站内准备 2-3 篇可被引用的资产页（数据/清单/模板），供外链落点。']},\n  {phase:'第 31–60 天 · 客座 + 社区', items:['每周 2 封客座 pitch，产出 1-2 篇客座文章（正文部分匹配 + bio 品牌词回链）。','社区节奏：每周 2 次有价值的回答/帖子，自然带裸链。','启动 HARO/专家选题，每周回 3-5 条，争取 1 次权威媒体露出。']},\n  {phase:'第 61–90 天 · 放大 + 发售', items:['发布一次行业小调研/统计页，外发媒体与博主。','ProductHunt / 发售日冲榜（配合终身买断档），单日可收 30+ 条品牌链。','复盘渠道 ROI，砍掉 CAC 高的渠道，预算压到前 3 名渠道。']},\n];\n\n// ---- 报告 ----\nconst L = [];\nL.push('外链 + 推广方案（R21/R22）');\nL.push('================================================');\nL.push('产品：' + product + ' ｜ 市场：' + market.toUpperCase() + ' ｜ 目标域名：' + domain);\nL.push('目标关键词：' + keywords.join('、'));\nL.push('');\nL.push('【一、锚文本策略（R21 · 安全配比）】');\nanchorPlan.forEach(a => { L.push('  ' + a.name + ' ' + a.sharePct + '% ｜ ' + a.example + ' ｜ ' + a.note); });\nL.push('  原则：新站前 6 个月精确匹配严格 ≤10%；品牌词为主、锚文本多样化，宁缺毋滥。');\nL.push('');\nL.push('【二、竞品外链画像（R21）】');\nL.push('  同类竞品基准 : 引用域名 ' + competitorProfile.benchmark.referringDomains + ' ｜ 总外链 ' + competitorProfile.benchmark.backlinks + ' ｜ DR ' + competitorProfile.benchmark.domainRating);\nL.push('  竞品名单 : ' + competitorProfile.competitors.join('、'));\ncompetitorProfile.replicateChecklist.forEach((item,i) => L.push('  复刻动作 ' + (i+1) + ' : ' + item));\nL.push('');\nL.push('【三、可拓展渠道清单（R21 · 按优先级）】');\nchannels.forEach(c => { L.push('  [P' + c.priority + '] ' + c.name + ' ｜ 锚文本：' + c.anchor); });\nL.push('');\nL.push('【四、推广 / 客座文章模板（R22）】');\nL.push('  完整可复制模板见 outreach.html / plan.json 的 templates 字段。');\nL.push('  覆盖：客座 pitch / 资源页收录 / 断链修复 / 媒体选题 / 文章大纲 / 作者 bio 锚文本回流。');\nL.push('');\nL.push('【五、90 天外链 / 推广节奏】');\nrhythm.forEach(p => { L.push('  ' + p.phase); p.items.forEach(it => L.push('    - ' + it)); });\nL.push('');\nL.push('【六、下一步（接入闭环）】');\nL.push('  1. 用程序化内容生产批量生成「值得被链」的资产页。');\nL.push('  2. 每条外链入库：来源域名 / DR / 锚文本类型 / 落点页 → 沉淀到站点档案。');\nL.push('  3. 接监控：外链增长曲线 vs 排名/流量曲线，验证渠道 ROI。');\nL.push('  4. 发售日用终身买断档 + ProductHunt 冲榜，把外链峰值拉满。');\nL.push('  5. 每月回跑本引擎，按真实收录率与排名变化调整锚文本配比。');\nL.push('');\nL.push('说明：outreach.html 为可直接复制使用的外联工具包，plan.json 为结构化方案，二者均已落盘。');\nconst report = L.join('\\n');\n\n// ---- outreach.html ----\nfunction block(title, text){ return '<section class=\"card\"><h2>' + esc(title) + '</h2><pre>' + esc(text) + '</pre></section>'; }\nconst anchorsRows = anchorPlan.map(a => '<tr><td>' + esc(a.name) + '</td><td>' + a.sharePct + '%</td><td><code>' + esc(a.example) + '</code></td><td>' + esc(a.note) + '</td></tr>').join('');\nconst channelsHtml = channels.map((c,i) => '<li class=\"ch\"><span class=\"pri\">P' + (i+1) + '</span><div><strong>' + esc(c.name) + '</strong><div class=\"meta\">价值 ' + c.value + '/5 · 难度 ' + c.ease + '/5 · 锚文本：' + esc(c.anchor) + '</div><div class=\"how\">' + esc(c.how) + '</div></div></li>').join('');\nconst rhythmHtml = rhythm.map(p => '<div class=\"phase\"><h3>' + esc(p.phase) + '</h3><ul>' + p.items.map(i => '<li>' + esc(i) + '</li>').join('') + '</ul></div>').join('');\nconst html = '<!doctype html>\\n<html lang=\"zh\">\\n<head>\\n<meta charset=\"utf-8\">\\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\\n<title>' + esc(product) + ' · 外链与推广工具包</title>\\n<style>\\n:root{--accent:#4a25c9;--ink:#17131b;--muted:#55645d;--line:rgba(23, 19, 27, .12);--surface:#fbfdf9}\\n*{box-sizing:border-box}\\nbody{margin:0;font-family:\"Plus Jakarta Sans\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--ink);background:#fffdf9;padding:40px 18px}\\n.wrap{max-width:920px;margin:0 auto}\\nh1{font-family:\"Fraunces\",Georgia,serif;font-size:32px;margin:0 0 6px}\\n.sub{color:var(--muted);margin:0 0 28px}\\n.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 22px;margin:0 0 18px}\\n.card h2{margin:0 0 12px;font-size:18px;color:var(--accent)}\\npre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.75;background:#fffdf9;border-radius:10px;padding:14px;margin:0}\\ntable{width:100%;border-collapse:collapse;font-size:13.5px}\\nth,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}\\nth{color:var(--muted);font-weight:600}\\ncode{background:#fffdf9;padding:2px 6px;border-radius:6px;font-size:12.5px}\\nul.ch{list-style:none;padding:0;margin:0}\\n.ch{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}\\n.pri{flex:0 0 34px;height:26px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;border-radius:8px;font-size:12px;font-weight:700}\\n.meta{color:var(--muted);font-size:12.5px;margin:3px 0}\\n.how{font-size:13px;line-height:1.6}\\n.phase h3{margin:0 0 8px;font-size:15px}\\n.phase ul{margin:0;padding-left:18px;line-height:1.8;font-size:13.5px}\\n.phase{margin:0 0 14px}\\n</style>\\n</head>\\n<body>\\n<div class=\"wrap\">\\n<h1>' + esc(product) + ' · 外链与推广工具包</h1>\\n<p class=\"sub\">R21 锚文本与渠道规划 + R22 客座文章 / 推广模板（由外链推广引擎生成）· 目标关键词：' + esc(kw0) + '</p>\\n<section class=\"card\"><h2>一、锚文本安全配比（R21）</h2><table><thead><tr><th>类型</th><th>占比</th><th>样例</th><th>要点</th></tr></thead><tbody>' + anchorsRows + '</tbody></table></section>\\n<section class=\"card\"><h2>二、可拓展渠道清单（R21 · 按优先级）</h2><ul class=\"ch\">' + channelsHtml + '</ul></section>\\n' + block('三、客座文章 pitch 邮件模板（R22）', templates.pitchGuest) + '\\n' + block('四、资源页收录 pitch 模板（R22）', templates.pitchResource) + '\\n' + block('五、断链修复 pitch 模板（R22）', templates.pitchBroken) + '\\n' + block('六、媒体 / 专家选题 pitch 模板（R22）', templates.pitchMedia) + '\\n' + block('七、客座文章大纲模板（R22）', templates.guestOutline) + '\\n' + block('八、作者 bio · 锚文本回流（R22）', templates.bio) + '\\n<section class=\"card\"><h2>九、90 天外链 / 推广节奏</h2>' + rhythmHtml + '</section>\\n</div>\\n</body>\\n</html>';\n\n// ---- 落盘 ----\nconst outDir = '/home/node/sites/_backlink/' + slugify(product);\nlet files = [];\ntry {\n  fs.mkdirSync(outDir, { recursive: true });\n  fs.writeFileSync(outDir + '/outreach.html', html);\n  const planFull = {\n    generated_at: new Date().toISOString(),\n    product: product, productType: ptype, market: market, domain: domain,\n    keywords: keywords, anchorPlan: anchorPlan,\n    competitorProfile: competitorProfile, channels: channels, rhythm: rhythm,\n    templates: templates,\n  };\n  fs.writeFileSync(outDir + '/plan.json', JSON.stringify(planFull, null, 2));\n  files = ['_backlink/' + slugify(product) + '/outreach.html', '_backlink/' + slugify(product) + '/plan.json'];\n} catch (e) { /* 容器内路径不可写时忽略 */ }\n\nconst plan = {\n  anchorPlan: anchorPlan,\n  channels: channels.slice(0, 10),\n  rhythm: rhythm,\n  competitorProfile: competitorProfile,\n  keywords: keywords,\n  domain: domain,\n};\nreturn [{ json: { report: report, plan: plan, files: files } }];"
+      }
+    },
+    {
+      "name": "Code: Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\nlet inp = {};\ntry { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString();\nlet report = ''; try { report = ($('Code: Generate').first().json.report) || ''; } catch (e) {}\nlet plan = {}; try { plan = ($('Code: Generate').first().json.plan) || {}; } catch (e) {}\nlet files = []; try { files = ($('Code: Generate').first().json.files) || []; } catch (e) {}\nconst payload = {\n  jobId: jobId, slug: '', url: '', dns: '',\n  status: report ? 'backlink-done' : 'backlink-partial',\n  result: report, plan: plan, files: files,\n  log: report ? '外链+推广方案已生成' : '流程已触发，但报告内容暂未生成'\n};\ntry {\n  const dir = '/home/node/sites/_bridge_cb';\n  fs.mkdirSync(dir, { recursive: true });\n  fs.writeFileSync(dir + '/' + (jobId || 'unknown') + '.json', JSON.stringify(payload, null, 2));\n} catch (e) { /* 忽略 */ }\nreturn [{ json: { ok: true, jobId: jobId } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code: Generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generate": {
+      "main": [
+        [
+          {
+            "node": "Code: Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": null,
+    "instanceId": null
+  },
+  "versionId": "00000000-0000-0000-0000-000000000025",
+  "pinData": {},
+  "tags": [
+    "indie-site-builder",
+    "backlink"
+  ]
+}

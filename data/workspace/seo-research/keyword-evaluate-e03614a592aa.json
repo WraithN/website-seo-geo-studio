@@ -1,0 +1,172 @@
+{
+  "verdict": "谨慎——可以做，但必须把重心从“chord trainer（和弦）”转向“节奏/扫弦训练”这一差异化角度，否则会与大量免费和弦图工具正面竞争。",
+  "score": 58,
+  "rationale": [
+    "种子词本身是“和弦训练”，而产品是“节奏训练 App”，两者意图存在错位；直接做该词会带来不精准的流量和低转化。",
+    "该词属于工具型/信息型混合意图，SERP 大概率被免费和弦图站、YouTube 教学和 App Store 页面占据，新站短期难以进入前列（估算，无真实 SERP 数据）。",
+    "长尾中“strumming patterns / rhythm trainer / practice”类词与产品高度契合，竞争度更低，是更值得优先切入的方向。",
+    "全球英语市场体量中等，属于小众乐器垂直，头部流量有限，但用户意图明确、付费意愿尚可（估算）。",
+    "本次未采集到任何真实联想词，所有扩展词均为估算，需先用 GSC/关键词工具验证后再投入内容生产。"
+  ],
+  "longtail": [
+    {
+      "term": "ukulele strumming patterns for beginners",
+      "intent": "信息",
+      "difficulty": 35,
+      "volume": "未知",
+      "opportunity": "高",
+      "why": "与节奏训练产品直接相关，教学类需求稳定，竞争多为博客与 YouTube，可做图文+练习页（估算）。"
+    },
+    {
+      "term": "ukulele rhythm trainer app",
+      "intent": "商业",
+      "difficulty": 30,
+      "volume": "未知",
+      "opportunity": "高",
+      "why": "意图贴近产品，搜索者已在找工具，转化路径最短（估算）。"
+    },
+    {
+      "term": "how to practice ukulele strumming with a metronome",
+      "intent": "信息",
+      "difficulty": 28,
+      "volume": "未知",
+      "opportunity": "高",
+      "why": "长尾具体、竞争低，可自然引导到 App 的节拍器/节奏功能（估算）。"
+    },
+    {
+      "term": "ukulele chord trainer",
+      "intent": "信息",
+      "difficulty": 55,
+      "volume": "未知",
+      "opportunity": "中",
+      "why": "种子词本身，工具型 SERP 竞争较强，可作为次级目标而非主攻（估算）。"
+    },
+    {
+      "term": "best ukulele learning app",
+      "intent": "商业",
+      "difficulty": 60,
+      "volume": "未知",
+      "opportunity": "中",
+      "why": "盘点类词流量好但竞争激烈，需靠对比页与真实评测切入（估算）。"
+    },
+    {
+      "term": "ukulele strumming patterns pdf",
+      "intent": "信息",
+      "difficulty": 25,
+      "volume": "未知",
+      "opportunity": "高",
+      "why": "可做可下载资源页换取外链与邮件订阅，竞争低（估算）。"
+    },
+    {
+      "term": "ukulele practice routine for beginners",
+      "intent": "信息",
+      "difficulty": 32,
+      "volume": "未知",
+      "opportunity": "中",
+      "why": "可承载节奏练习内容并内链到产品页（估算）。"
+    },
+    {
+      "term": "island strum ukulele tutorial",
+      "intent": "信息",
+      "difficulty": 30,
+      "volume": "未知",
+      "opportunity": "中",
+      "why": "具体扫弦型教学，搜索意图明确，适合做系列内容（估算）。"
+    },
+    {
+      "term": "ukulele metronome online",
+      "intent": "交易",
+      "difficulty": 40,
+      "volume": "未知",
+      "opportunity": "中",
+      "why": "工具型需求，可做免费网页节拍器引流至 App（估算）。"
+    },
+    {
+      "term": "ukulele chord trainer vs strumming trainer",
+      "intent": "商业",
+      "difficulty": 20,
+      "volume": "未知",
+      "opportunity": "中",
+      "why": "对比类长尾竞争极低，可强化产品差异化定位（估算）。"
+    }
+  ],
+  "clusters": [
+    {
+      "cluster": "扫弦与节奏教学",
+      "primary": "ukulele strumming patterns for beginners",
+      "intent": "信息",
+      "targetPage": "新建：/blog/ukulele-strumming-patterns",
+      "priority": "高"
+    },
+    {
+      "cluster": "节奏训练工具",
+      "primary": "ukulele rhythm trainer app",
+      "intent": "商业",
+      "targetPage": "新建：/rhythm-trainer 落地页",
+      "priority": "高"
+    },
+    {
+      "cluster": "练习方法与节拍器",
+      "primary": "how to practice ukulele strumming with a metronome",
+      "intent": "信息",
+      "targetPage": "新建：/blog/practice-with-metronome",
+      "priority": "高"
+    },
+    {
+      "cluster": "和弦训练（次级）",
+      "primary": "ukulele chord trainer",
+      "intent": "信息",
+      "targetPage": "现有/新建：/chord-trainer（若产品支持）",
+      "priority": "中"
+    },
+    {
+      "cluster": "App 盘点与对比",
+      "primary": "best ukulele learning app",
+      "intent": "商业",
+      "targetPage": "新建：/alternatives 与对比页",
+      "priority": "中"
+    },
+    {
+      "cluster": "可下载资源",
+      "primary": "ukulele strumming patterns pdf",
+      "intent": "信息",
+      "targetPage": "新建：/resources/strumming-patterns-pdf",
+      "priority": "中"
+    }
+  ],
+  "risks": [
+    "种子词意图（和弦）与产品（节奏）错位，可能带来高跳出、低转化的流量。",
+    "工具型 SERP 被免费和弦图站与 YouTube 占据，新站短期难进前列（估算，未验证真实 SERP）。",
+    "本次无真实联想词与搜索量数据，所有 volume 均为“未知”，difficulty 为估算，存在判断偏差风险。",
+    "小众乐器垂直整体搜索体量有限，单靠 SEO 难以支撑增长，需配合社媒/短视频。",
+    "“best app”类盘点词竞争激烈，若无真实评测与外部引用，内容易被视为薄内容。"
+  ],
+  "nextActions": [
+    {
+      "action": "用 GSC（若有站点）或关键词工具拉取上述 10 个长尾词的真实搜索量与 KD，替换估算值",
+      "owner": "SEO",
+      "effort": "低"
+    },
+    {
+      "action": "抓取“ukulele strumming patterns for beginners”与“ukulele rhythm trainer app”的 Top 10 SERP，确认页面类型与可竞争性",
+      "owner": "SEO",
+      "effort": "中"
+    },
+    {
+      "action": "优先产出扫弦型教学页与节奏训练落地页，内链至 App 下载",
+      "owner": "内容",
+      "effort": "中"
+    },
+    {
+      "action": "制作 strumming patterns PDF 资源页，用于外链与邮件获客",
+      "owner": "内容",
+      "effort": "中"
+    },
+    {
+      "action": "若产品支持和弦功能，再补 chord trainer 页面，否则暂缓该词主攻",
+      "owner": "产品+SEO",
+      "effort": "低"
+    }
+  ],
+  "__fieldCompliance": "100%"
+}

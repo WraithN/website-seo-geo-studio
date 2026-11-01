@@ -1,0 +1,151 @@
+# 关键词评估（值不值得做）
+
+- 技能套件：SEO 研究与竞品
+- 任务：keyword-evaluate
+- 生成时间：2026/10/30 22:53:35
+- 数据来源：无真实采集，结论为估算
+
+## verdict
+> 结论：值得做 / 谨慎 / 不值得，一句话
+
+谨慎——值得做，但只作为工具/信息型内容切入，不要指望靠它直接变现；先做小规模验证。
+
+## score
+> 0-100 总评分（整数）
+
+58
+
+## rationale
+> 3-5 条判断理由，每条一句话
+
+- 种子词属于小众乐器工具类需求，搜索量整体偏低（估算），但意图清晰、竞争度中等，适合用工具页或教程页低成本试水。
+- 本次未采集到任何真实联想词，长尾全部为估算扩展，需先用 GSC 或关键词工具验证真实搜索量与 SERP 形态再投入。
+- SERP 预计以工具站（chord 图表/练习器）、YouTube 教学视频和论坛问答为主，纯内容页难以突围，工具型页面更有机会。
+- 商业价值偏弱：用户多为初学者，付费意愿低，变现路径依赖广告、 affiliate（乐器/课程）或导流到 App。
+- 若产品本身是练习类 App 或教学产品，则相关性高、可作为获客入口；若无产品承接，优先级应下调。
+
+## longtail
+> 长尾词数组，每项 {term, intent, difficulty(1-100), volume(估算整数或"未知"), opportunity(高/中/低), why}
+
+- - term: ukulele chord trainer online
+  - intent: 交易
+  - difficulty: 35
+  - volume: 未知
+  - opportunity: 高
+  - why: 工具型意图明确，用户想直接用而非阅读，适合做免费在线工具页承接（估算）。
+- - term: how to practice ukulele chords
+  - intent: 信息
+  - difficulty: 40
+  - volume: 未知
+  - opportunity: 中
+  - why: 教程型需求稳定，可做长文+内嵌练习工具，但 SERP 可能被 YouTube 占据（估算）。
+- - term: ukulele chord practice app
+  - intent: 商业
+  - difficulty: 45
+  - volume: 未知
+  - opportunity: 中
+  - why: 带商业调查意图，适合对比/推荐类页面，但需真实产品数据支撑（估算）。
+- - term: free ukulele chord trainer
+  - intent: 交易
+  - difficulty: 30
+  - volume: 未知
+  - opportunity: 高
+  - why: 'free' 修饰词降低竞争，工具页可直接匹配（估算）。
+- - term: ukulele chord switching practice
+  - intent: 信息
+  - difficulty: 30
+  - volume: 未知
+  - opportunity: 中
+  - why: 具体痛点长尾，竞争低，适合做专项教程或练习模块（估算）。
+- - term: best ukulele chord trainer
+  - intent: 商业
+  - difficulty: 50
+  - volume: 未知
+  - opportunity: 中
+  - why: 盘点类意图，可做 alternatives/对比页，但需可核验的产品信息（估算）。
+- - term: ukulele chord trainer for beginners
+  - intent: 信息
+  - difficulty: 35
+  - volume: 未知
+  - opportunity: 中
+  - why: 初学者限定词，意图清晰，适合入门教程+工具组合页（估算）。
+- - term: ukulele chord quiz
+  - intent: 交易
+  - difficulty: 25
+  - volume: 未知
+  - opportunity: 高
+  - why: 测验型工具需求，开发成本低、竞争小，易做差异化（估算）。
+- - term: ukulele barre chord practice
+  - intent: 信息
+  - difficulty: 30
+  - volume: 未知
+  - opportunity: 中
+  - why: 细分难点长尾，搜索量小但转化意图强（估算）。
+- - term: ukulele chord trainer vs guitar
+  - intent: 商业
+  - difficulty: 40
+  - volume: 未知
+  - opportunity: 低
+  - why: 对比意图存在但需求窄，优先级低（估算）。
+
+## clusters
+> 意图簇数组，每项 {cluster, primary, intent, targetPage, priority}
+
+- - cluster: 在线工具/练习器
+  - primary: ukulele chord trainer online
+  - intent: 交易
+  - targetPage: 新建：/ukulele-chord-trainer 工具页
+  - priority: 高
+- - cluster: 初学者教程
+  - primary: how to practice ukulele chords
+  - intent: 信息
+  - targetPage: 新建：/blog/practice-ukulele-chords 教程长文
+  - priority: 高
+- - cluster: App/产品对比
+  - primary: best ukulele chord trainer
+  - intent: 商业
+  - targetPage: 新建：/best-ukulele-chord-trainer 盘点页
+  - priority: 中
+- - cluster: 专项练习难点
+  - primary: ukulele chord switching practice
+  - intent: 信息
+  - targetPage: 新建：/blog/chord-switching-practice 或并入教程页
+  - priority: 中
+- - cluster: 测验/互动
+  - primary: ukulele chord quiz
+  - intent: 交易
+  - targetPage: 新建：/ukulele-chord-quiz 互动页
+  - priority: 中
+
+## risks
+> 风险数组，每项一条字符串
+
+- 本次无真实联想词与搜索量数据，全部长尾为估算，存在方向偏差风险。
+- 该词整体搜索量可能偏低，投入产出比不确定，需先验证真实需求规模。
+- SERP 可能被 YouTube 视频与成熟工具站占据，新页面短期难获排名。
+- 商业变现路径弱，若无可承接的产品/affiliate，流量价值有限。
+- 工具页需持续维护与真实功能，纯内容页难以满足交易型意图。
+
+## nextActions
+> 下一步动作数组，每项 {action, owner, effort}
+
+- - action: 用 GSC（若有站点）或关键词工具拉取 'ukulele chord trainer' 及变体的真实搜索量、KD 与 SERP Top10 页面类型
+  - owner: SEO
+  - effort: 低
+- - action: 人工查看该词 SERP，确认是工具站、视频还是教程主导，据此决定工具页 vs 教程页优先
+  - owner: SEO
+  - effort: 低
+- - action: 若验证需求成立，先上线一个最小可用在线 chord trainer 工具页并配 800+ 字说明
+  - owner: 内容/前端
+  - effort: 中
+- - action: 围绕初学者教程簇产出 1 篇 1500+ 字长文，内链到工具页
+  - owner: 内容
+  - effort: 中
+- - action: 明确变现路径（广告/affiliate/App 导流），无承接方案则暂缓投入
+  - owner: 产品/运营
+  - effort: 低
+
+## 其他输出
+
+### __missing
+

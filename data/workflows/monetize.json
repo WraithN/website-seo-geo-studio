@@ -1,0 +1,84 @@
+{
+  "name": "变现设计（R24 广告vs订阅+锚点定价）",
+  "nodes": [
+    {
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "webhookId": "a1b2c3d4-1234-4abc-8def-0feedcafe0024",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "monetize",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "name": "Code: Generate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\nlet inp = {};\ntry { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString().trim();\nconst product = (inp.product || inp.name || 'Site').toString().trim() || 'Site';\nlet ptype = (inp.productType || 'tool').toString().toLowerCase();\nlet market = (inp.market || 'us').toString().toLowerCase();\nlet currency = (inp.currency || '').toString().trim();\nlet pv = parseFloat(inp.monthlyPageviews || inp.pageviews || 0) || 0;\nlet mau = parseFloat(inp.monthlyActiveUsers || inp.mau || 0) || 0;\nlet priceHint = parseFloat(inp.priceHint || inp.price || 0) || 0;\n\nconst MARKET = {us:['USD','$',1],gb:['GBP','£',0.79],ca:['CAD','C$',1.36],au:['AUD','A$',1.52],cn:['CNY','¥',7.2],jp:['JPY','¥',150],de:['EUR','€',0.92],fr:['EUR','€',0.92],es:['EUR','€',0.92],kr:['KRW','₩',1350],in:['INR','₹',83],sg:['SGD','S$',1.35]};\nconst PDEF = {tool:9,saas:19,'content-site':9,'mobile-app':4.99,newsletter:5,marketplace:0};\nconst ADRPM = {tool:2,saas:3,'content-site':4,'mobile-app':1.5,newsletter:5,marketplace:0};\nconst V2U = {tool:0.25,saas:0.20,'content-site':0.10,'mobile-app':0.30,newsletter:0.40,marketplace:0.15};\nif(!PDEF[ptype]) ptype='tool';\nconst curArr = MARKET[market] || MARKET.us;\nlet cur = curArr[0], sym = curArr[1], fx = curArr[2];\nif(currency){ for(const k in MARKET){ if(MARKET[k][0]===currency){ cur=MARKET[k][0]; sym=MARKET[k][1]; fx=MARKET[k][2]; } } }\nconst usdPrice = priceHint>0 ? priceHint : (PDEF[ptype]||9);\nfunction slugify(t){return (t||'').toLowerCase().trim().replace(/['\"]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'site';}\nfunction money(usd){ let v=usd*fx; if(cur==='JPY'||cur==='KRW'||cur==='INR'){v=Math.round(v); return sym+v.toLocaleString('en-US');} v=Math.round(v*100)/100; let s=v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); return sym+s; }\nif(mau<=0 && pv>0) mau = pv*V2U[ptype];\nconst conv = 0.025;\nconst rpm = ADRPM[ptype]||3;\nconst adMonthly = pv*rpm/1000;\nconst paid = mau*conv;\nconst subMonthly = paid*usdPrice;\nconst annualCash = paid*0.3*(usdPrice*10);\nconst denomVis = mau>0?mau:(pv>0?pv:1);\nconst adArpu = denomVis?adMonthly/denomVis:0;\nconst subArpu = mau>0?subMonthly/mau:0;\nconst mult = adArpu>0?Math.round(subArpu/adArpu*10)/10:null;\nlet winner, verdict;\nif(mau<=0&&pv<=0){winner='数据不足';verdict='填入月访问量后给出广告 vs 订阅对比。';}\nelse if(subMonthly>adMonthly*1.5&&paid>=50){winner='订阅更优';verdict='订阅月收入约为广告的 '+(subMonthly/adMonthly).toFixed(1)+' 倍，每用户月收入是广告的 '+mult+' 倍（经验基准约 10 倍），建议以订阅为主、广告/联盟兜底。';}\nelse if(adMonthly>subMonthly*1.5){winner='广告更优（当前）';verdict='当前广告月收入更高，先用广告+联盟养流量，免费档收集账号，过拐点再切订阅。';}\nelse{winner='混合更稳';verdict='广告与订阅差距不大，走「免费档广告/联盟 + 付费订阅」混合模型。';}\nlet crossover;\nconst denom2 = V2U[ptype]*conv*usdPrice - rpm/1000;\nif(denom2<=0) crossover=-1; else { const cv=rpm/1000/denom2; crossover = cv>=1000?Math.round(cv):0; }\nconst sens=[];\n[10000,50000,100000,500000,1000000].forEach(pvt=>{const a=pvt*rpm/1000;const m=pvt*V2U[ptype];const s=m*conv*usdPrice;sens.push({pageviews:pvt,mau:Math.round(m),ad:Math.round(a*10)/10,sub:Math.round(s*10)/10,better:s>a?'sub':'ad'});});\nfunction freeFeats(){const b={tool:['核心工具可用','基础额度/每日次数限制','含轻量广告/联盟推荐'],saas:['1 个席位','基础功能','社区支持','含品牌水印/广告'],'content-site':['免费阅读全部内容','含展示广告','可评论/收藏'],'mobile-app':['免费下载','基础功能','含激励广告/横幅'],newsletter:['免费订阅','每周精选','含赞助位'],marketplace:['免费浏览/发布','基础撮合','含推广位竞价']};return b[ptype]||b.tool;}\nfunction proFeats(){const b={tool:['无广告/无水印','无限额度','高级/批量功能','优先支持'],saas:['多席位','全部高级功能','去水印/自定义品牌','优先工单 + API'],'content-site':['无广告纯净体验','会员专属内容/下载','早鸟权益'],'mobile-app':['去广告','全部高级功能解锁','离线/云同步'],newsletter:['付费深度专栏','往期归档','私享社群'],marketplace:['认证商家','数据看板','优先曝光']};return b[ptype]||b.tool;}\nconst tiers=[];\ntiers.push({key:'free',name:'免费版',price:money(0),period:'永久免费',badge:'',recommended:false,features:freeFeats(),cta:'免费开始',note:'承接 SEO 流量入口（R13 内容页），收集邮箱/账号，广告/联盟兜底变现。'});\ntiers.push({key:'monthly',name:'Pro 月付',price:money(usdPrice),period:'每月',badge:'',recommended:false,features:proFeats(),cta:'升级月付',note:'低门槛付费档，用于测试价格弹性与付费意愿。'});\nconst annualUsd=usdPrice*10;const savePct=Math.round((1-10/12)*100);\ntiers.push({key:'annual',name:'Pro 年付',price:money(annualUsd),period:'每年',badge:'最受欢迎 · 锚点',recommended:true,features:proFeats().concat(['年付立省约 '+savePct+'%（相当于 '+money(annualUsd/12)+'/月）','专属高级模板/权益']),cta:'年付立省',note:'放在中间并标「最受欢迎」，利用对比让月付显贵、终身显超值——锚点定价核心。'});\nconst lifetimeUsd=Math.round(usdPrice*22);\ntiers.push({key:'lifetime',name:'终身买断',price:money(lifetimeUsd),period:'一次买断',badge:'高锚点 · 发售限定',recommended:false,features:proFeats().concat(['一次性付费永久使用','未来大版本免费','适合 ProductHunt / AppSumo 引爆']),cta:'一次买断',note:'发售/限时高锚点，衬托年付划算，快速回笼现金流。'});\nif(ptype==='marketplace'){tiers[3]={key:'commission',name:'交易佣金',price:'每笔 '+money(usdPrice*0.05),period:'成交抽成 ~5%',badge:'平台模式',recommended:true,features:['买卖双方免费入驻','成交后抽佣 ~5%','规模越大收入越高'],cta:'开通店铺',note:'平台型以佣金/抽成为主，配合广告位+增值服务。'};}\nif(ptype==='mobile-app'){tiers.forEach(t=>{if(t.key==='monthly'||t.key==='annual')t.note+='（App 内购需预留 15–30% 商店分成，净收入按此折算。）';});}\nconst slug=slugify(product);\nconst outDir='/home/node/sites/_monetize/'+slug;\ntry{fs.mkdirSync(outDir,{recursive:true});}catch(e){}\nconst plan={generated_at:new Date().toISOString(),product:product,productType:ptype,market:market,currency:cur,comparison:{pageviews:Math.round(pv),mau:Math.round(mau),paidUsers:Math.round(paid*10)/10,adRpm:rpm,monthlyPriceUSD:usdPrice,conversion:conv,adMonthlyUSD:Math.round(adMonthly*10)/10,subMonthlyUSD:Math.round(subMonthly*10)/10,annualPrepayCashUSD:Math.round(annualCash*10)/10,adArpuUSD:Math.round(adArpu*10000)/10000,subArpuUSD:Math.round(subArpu*10000)/10000,subVsAdMultiple:mult,winner:winner,verdict:verdict,crossoverPageviews:crossover},sensitivity:sens,tiers:tiers};\nfs.writeFileSync(outDir+'/plan.json', JSON.stringify(plan,null,2));\nlet tiersHtml='';\ntiers.forEach(t=>{const rec=t.recommended?' tier--rec':'';const badge=t.badge?'<span class=\"tier-badge\">'+t.badge+'</span>':'';const feats=(t.features||[]).map(f=>'<li>'+f+'</li>').join('');tiersHtml+='<div class=\"tier'+rec+'\">'+badge+'<h3>'+t.name+'</h3><div class=\"price\"><span class=\"amt\">'+t.price+'</span><span class=\"per\">/ '+t.period+'</span></div><a class=\"cta\" href=\"#\">'+t.cta+'</a><ul class=\"feats\">'+feats+'</ul><p class=\"note\">'+t.note+'</p></div>';});\nconst pHtml='<!doctype html><html lang=\"zh\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>'+product+' · 定价</title><style>:root{--accent:#5b34e6;--ink:#17131b;--muted:#5f5867;--line:rgba(23,19,27,.12);--surface:#fffdf9}*{box-sizing:border-box}body{margin:0;font-family:\"Plus Jakarta Sans\",\"PingFang SC\",sans-serif;color:var(--ink);background:#f6f3ec;padding:40px 18px}.wrap{max-width:1080px;margin:0 auto}h1{font-family:Georgia,serif;text-align:center;font-size:34px;margin:0 0 6px}.sub{text-align:center;color:var(--muted);margin:0 0 30px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}@media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.grid{grid-template-columns:1fr}}.tier{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px 20px;display:flex;flex-direction:column}.tier--rec{border:2px solid var(--accent);box-shadow:0 14px 34px rgba(91,52,230,.18)}.tier-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;white-space:nowrap}.tier h3{margin:6px 0 10px;font-size:18px}.price{margin:4px 0 14px}.amt{font-size:28px;font-weight:800}.per{color:var(--muted);font-size:13px;margin-left:4px}.cta{display:block;text-align:center;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;padding:11px;border-radius:12px;margin-bottom:14px}.tier--rec .cta{box-shadow:0 8px 22px rgba(91,52,230,.32)}ul.feats{list-style:none;padding:0;margin:0 0 12px;font-size:13.5px;line-height:1.7;color:#332c3b}ul.feats li::before{content:\"✓\";color:var(--accent);font-weight:800;margin-right:8px}.note{font-size:12px;color:var(--muted);line-height:1.55;margin:auto 0 0}</style></head><body><div class=\"wrap\"><h1>'+product+' 定价</h1><p class=\"sub\">免费起步 · 订阅增长 · 锚点定价（由 R24 变现设计引擎生成）</p><div class=\"grid\">'+tiersHtml+'</div></div></body></html>';\nfs.writeFileSync(outDir+'/pricing.html', pHtml);\nconst files=['_monetize/'+slug+'/pricing.html','_monetize/'+slug+'/plan.json'];\nlet R=[];\nR.push('变现设计方案');R.push('================================================');\nR.push('产品：'+product+' ｜ 类型：'+ptype+' ｜ 市场：'+(market||'us').toUpperCase());\nR.push('');R.push('【一、广告 vs 订阅对比】');\nR.push('  月访问量 : '+Math.round(pv).toLocaleString()+' ｜ 月活(估算) : '+Math.round(mau).toLocaleString()+' ｜ 付费用户(估算) : '+Math.round(paid*10)/10);\nR.push('  广告月收入 : '+money(adMonthly)+'（RPM $'+rpm+'/千次）');\nR.push('  订阅月收入 : '+money(subMonthly)+'（'+money(usdPrice)+'/月 × '+(conv*100)+'% 转化）');\nR.push('  年付预付款 : '+money(annualCash)+'（约 30% 选年付）');\nR.push('  结论 : '+winner+' —— '+verdict);\nR.push('');R.push('【二、订阅 vs 广告的 10 倍法则】');\nR.push('  每用户月收入：订阅 ≈ $'+Math.round(subArpu*10000)/10000+' vs 广告 ≈ $'+Math.round(adArpu*10000)/10000+'。');\nif(mult!==null)R.push('  倍率 : 订阅每用户月收入约为广告的 '+mult+' 倍（经验基准约 10 倍）。');\nif(crossover===-1)R.push('  拐点 : 当前参数下广告在任何流量都更优。');\nelse if(crossover>0)R.push('  拐点 : 月访问量超过约 '+crossover.toLocaleString()+' 时订阅反超。');\nelse R.push('  拐点 : 当前参数下订阅在正流量即更优，建议用真实数据校准。');\nR.push('');R.push('【三、锚点定价模板】');\ntiers.forEach(t=>{R.push(' · '+t.name+'：'+t.price+' / '+t.period+(t.badge?('  <'+t.badge+'>'):''));R.push('      卖点 : '+t.cta+' ｜ '+t.note);});\nR.push('');R.push('【四、下一步】');\nR.push('  1. 用 R13 程序化内容生产生成 SEO 落地页承接免费流量。');\nR.push('  2. 接支付：海外 Stripe/Paddle，国内微信/支付宝，App 走 IAP。');\nR.push('  3. 埋点注册/付费转化率、ARPU，回到 R20 监控迭代。');\nconst report=R.join('\\n');\nreturn [{ json: { ok:true, jobId:jobId, report:report, plan:plan, files:files } }];\n"
+      }
+    },
+    {
+      "name": "Code: Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\nlet inp = {};\ntry { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString();\nlet report = ''; try { report = ($('Code: Generate').first().json.report) || ''; } catch (e) {}\nlet plan = {}; try { plan = ($('Code: Generate').first().json.plan) || {}; } catch (e) {}\nlet files = []; try { files = ($('Code: Generate').first().json.files) || []; } catch (e) {}\nconst payload = {\n  jobId: jobId, slug: '', url: '', dns: '',\n  status: report ? 'monetize-done' : 'monetize-partial',\n  result: report, plan: plan, files: files,\n  log: report ? '变现方案已生成' : '流程已触发，但报告内容暂未生成'\n};\ntry {\n  const dir = '/home/node/sites/_bridge_cb';\n  fs.mkdirSync(dir, { recursive: true });\n  fs.writeFileSync(dir + '/' + (jobId || 'unknown') + '.json', JSON.stringify(payload, null, 2));\n} catch (e) { /* 忽略 */ }\nreturn [{ json: { ok: true, jobId: jobId } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code: Generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generate": {
+      "main": [
+        [
+          {
+            "node": "Code: Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": null,
+    "instanceId": null
+  },
+  "versionId": "00000000-0000-0000-0000-000000000024",
+  "pinData": {},
+  "tags": [
+    "indie-site-builder",
+    "monetize"
+  ]
+}

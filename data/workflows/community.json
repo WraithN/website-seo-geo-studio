@@ -1,0 +1,76 @@
+{
+  "name": "社区增长（R23 公开构建 + 社区互动）",
+  "nodes": [
+    {
+      "id": "5547c26a-13cb-5687-b6b2-908af9bf5204",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "1c5bb339-289d-51e4-8b57-4145a5204e76",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "community",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "df4a1bda-1741-55fb-980b-2d7940cb40ae",
+      "name": "Code: Generate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "jsCode": "\nconst fs = require('fs');\nconst path = require('path');\nlet inp = {};\ntry { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString().trim();\nconst product = (inp.product || inp.name || '未命名产品').toString().trim() || '未命名产品';\nconst ptype = (inp.productType || 'tool').toString().toLowerCase();\nconst market = (inp.market || 'us').toString().toLowerCase();\nconst stage = (inp.stage || 'building').toString().toLowerCase();\nconst domain = (inp.domain || inp.url || '').toString().trim() || 'https://your-site.com';\nconst audience = (inp.audience || '').toString().trim() || '（未填）';\nfunction slugify(t){ return (t||'').toLowerCase().trim().replace(/['\"]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'site'; }\nfunction esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }\nconst slug = slugify(product);\n\nconst STAGE = {\n  idea:['想法验证期','讲清「为什么做、为谁做」，用痛点共鸣换反馈与候补名单'],\n  building:['开发期','公开进度与取舍决策，用「正在做 X」制造期待与陪伴感'],\n  launched:['刚上线期','聚焦上线故事 + 首批用户反馈，冲首发曝光与口碑'],\n  growth:['增长期','公开数据与增长实验，把可复用打法变成行业内容资产'],\n};\nconst stageInfo = STAGE[stage] || STAGE.building;\n\nconst CHANNELS = [\n  ['x','X / Twitter','global','公开构建线程、回复大V、参与 #buildinpublic','每周 3-5 条（1 长线程 + 若干碎片）','别刷屏硬广；先贡献再带链接；标签别堆砌',5],\n  ['indiehackers','Indie Hackers','global','发里程碑帖、参与组合问题、分享收入透明贴','每周 1-2 帖 + 每日回帖','纯广告帖会被踩；要带真实数字与教训',5],\n  ['producthunt','Product Hunt','global','冲首发日、评论区互动、感谢支持者','产品节点式（首发 + 大版本）','别刷票；首发当天全程在线回评论',5],\n  ['reddit','Reddit（r/SideProject 等）','global','发 Show 帖、真诚参与版块讨论','每周 1-2 帖（遵守各版规则）','各版自推规则严格，先潜水再发；勿多版同发',4],\n  ['hackernews','Hacker News（Show HN）','global','Show HN 技术向标题、评论区硬核答疑','节点式（有技术亮点时）','标题别营销腔；被喷就正面回应不删评',4],\n  ['devto','dev.to / Hashnode','global','发技术教程、回链产品页','每周 1 篇','纯软文会被限流；要给出真技术价值',3],\n  ['discord','Discord / Slack 社群','global','在垂直社群当「有用的人」、答疑','每日轻互动','进群就发广告会被踢；先建立信任',3],\n  ['sspai','少数派（sspai）','cn','发效率/工具长文、投稿首页','每 1-2 周 1 篇','硬广不上首页；要有真实使用场景',4],\n  ['v2ex','V2EX','cn','在「分享创造」「程序员」节点发帖','每 1-2 周 1 帖','节点规则严，标题别标题党；忌重复发',4],\n  ['jike','即刻','cn','发日常构建动态、参与「独立开发」圈子','每周 2-3 条','像朋友圈一样真诚，别刷屏',3],\n  ['zhihu','知乎','cn','回答「有哪些好用的 X」类问题、写专栏','每周 1 答/文','软广易被折叠；要中立对比、给出取舍',4],\n  ['bilibili','B 站','cn','开发 vlog、产品演示、教程视频','每 2 周 1 条','前 30 秒别只讲自己；给观众价值',3],\n  ['xiaohongshu','小红书','cn','图文笔记「工具安利」「开发日常」','每周 1-2 条','限流严，避免外链；靠口碑词自然种草',2],\n];\nconst wanted = (market==='cn') ? ['cn'] : (market==='both'||market==='global'||market==='all') ? ['cn','global'] : ['global'];\nconst channels = CHANNELS.filter(c=>wanted.includes(c[2])).map(c=>({\n  id:c[0], name:c[1], region:c[2]==='cn'?'国内':'海外', how:c[3], cadence:c[4], redline:c[5],\n  value:c[6], valueStars:'★'.repeat(c[6])+'☆'.repeat(5-c[6])\n})).sort((a,b)=>b.value-a.value);\n\nconst ARCH = [\n  ['progress','进度更新','持续曝光、制造陪伴感',\n   '【进度】{product} 本周完成：\\n· {milestone1}\\n· {milestone2}\\n下周打算：{next}\\n卡在：{blocker}\\n——做独立开发第 {days} 天，欢迎蹲一个更新。',\n   '[Progress] Shipped this week on {product}:\\n· {milestone1}\\n· {milestone2}\\nNext up: {next}\\nStuck on: {blocker}\\n— Day {days} of building in public.'],\n  ['decision','背后决策','展示专业判断，吸引同行',\n   '【决策】为什么 {product} 选择 {choice} 而不是 {alternative}？\\n核心权衡：{tradeoff}\\n代价：{cost}\\n如果你是我，会怎么选？',\n   '[Decision] Why {product} went with {choice} over {alternative}.\\nTrade-off: {tradeoff}\\nCost: {cost}\\nWhat would you pick?'],\n  ['transparency','数据透明','真实数据最具传播力',\n   '【数据】{product} 上线 {period} 的真实数字：\\n访问 {visits} · 注册 {signups} · 付费 {paid}\\n最有效的渠道：{channel}\\n最意外的发现：{finding}\\n公开仪表盘：{link}',\n   '[Numbers] Real numbers for {product} after {period}:\\nVisits {visits} · Signups {signups} · Paid {paid}\\nBest channel: {channel}\\nBiggest surprise: {finding}\\nOpen dashboard: {link}'],\n  ['feedback','用户反馈','让用户参与共建、提升留存',\n   '【共建】{product} 刚收到一条用户反馈：「{quote}」\\n我打算：{action}\\n你也有想吐槽 / 想要的功能吗？评论区告诉我，认真看。',\n   '[Co-build] Got this feedback on {product}: \"{quote}\"\\nMy plan: {action}\\nGot a gripe or a feature wish? Drop it below — I read everything.'],\n  ['failure','失败复盘','真实故事引发共鸣与转发',\n   '【复盘】这次踩坑了：{mistake}\\n本以为：{expectation}\\n实际：{reality}\\n下次我会：{lesson}\\n独立开发里，失败也是素材。',\n   '[Retro] Screwed up: {mistake}\\nExpected: {expectation}\\nGot: {reality}\\nNext time I\\'ll: {lesson}\\nIn indie building, even the misses are content.'],\n  ['compare','对比 / 迁移','截流竞品搜索与替代需求',\n   '【对比】我把 {product} 和常用方案 {alternative} 做了个对比：\\n{alternative} 强在：{alt_pros}\\n{product} 强在：{our_pros}\\n适合谁：{who}\\n完整对比：{link}',\n   '[Compare] Put {product} head-to-head with {alternative}:\\n{alternative} wins on: {alt_pros}\\n{product} wins on: {our_pros}\\nBest for: {who}\\nFull breakdown: {link}'],\n  ['teach','教程 / 心得','为内容站与外链提供弹药',\n   '【干货】做 {product} 时总结的 {skill} 打法：\\n1. {tip1}\\n2. {tip2}\\n3. {tip3}\\n完整文章：{link}\\n——踩过的坑都写进去了。',\n   '[Teach] My {skill} playbook from building {product}:\\n1. {tip1}\\n2. {tip2}\\n3. {tip3}\\nFull write-up: {link}'],\n  ['milestone','发布里程碑','节点式爆发，冲首发流量',\n   '【里程碑】{product} 达成 {milestone}！\\n从 {origin} 到现在，最想感谢：{thanks}\\n下一步：{next}\\n一起来试试 → {link}',\n   '[Milestone] {product} just hit {milestone}!\\nFrom {origin} to now — biggest thanks to {thanks}\\nNext: {next}\\nCome try it → {link}'],\n];\nconst zh = (market==='cn');\nconst fill = {product:product, milestone1:'完成「XX」功能', milestone2:'修复了「YY」体验', next:'做「ZZ」',\n  blocker:'「WW」还没想清', days:'30', choice:'自建', alternative:'SaaS', tradeoff:'可控性 vs 开发速度',\n  cost:'多花了一周', period:'一个月', visits:'5,000', signups:'300', paid:'20', channel:'内容 SEO',\n  finding:'移动端用户留存更高', link:domain, quote:'希望有个 XX 功能', action:'排进下个版本',\n  mistake:'一上来就做全功能', expectation:'全能才有人用', reality:'一个杀手功能就够了', lesson:'先做减法',\n  alt_pros:'生态 / 知名度', our_pros:'专注 / 更快 / 更便宜', who:'只要「XX」的极简用户', skill:'独立开发获客',\n  tip1:'先选对词', tip2:'批量做页', tip3:'外链慢养', milestone:'第 100 个用户', origin:'一个想法', thanks:'早期反馈的你'};\nconst templates = ARCH.map(a=>{\n  let body = zh ? a[3] : a[4];\n  for (const k in fill) body = body.split('{'+k+'}').join(fill[k]);\n  return {id:a[0], name:a[1], purpose:a[2], body:body, placeholders:'（{...} 处请替换为你的实际内容）'};\n});\nconst calendar = {\n  weeks: [\n    ['第 1 周 · 亮相','讲清「做什么 / 为谁做」，埋下悬念',['decision','progress']],\n    ['第 2 周 · 过程','公开开发进度与取舍，制造陪伴',['progress','teach']],\n    ['第 3 周 · 共建','收集反馈、回应用户，强化参与感',['feedback','transparency']],\n    ['第 4 周 · 冲刺','上线/里程碑爆发，转化关注为用户',['milestone','compare']],\n  ],\n  cadence: zh ? '每周 3-4 条（1 长文 + 2-3 动态），稳定更新比单条爆款更重要。' : '每周 3-4 条（1 长线程 + 2-3 碎片），保持节奏比单条爆款更重要。',\n  note: '每天 15 分钟回复评论 > 偶尔一次爆款。公开构建贵在持续。'\n};\nconst sop = [\n  {step:'1. 先听 7 天', detail:'潜水看社群在聊什么、反感什么广告形态，找到「有用」的切入角度。'},\n  {step:'2. 贡献优先', detail:'先答疑、分享经验、帮别人解决问题，建立「靠谱」人设，再自然带出产品。'},\n  {step:'3. 控制自推比例', detail:'红线：自推内容 ≤ 20%，80% 是纯贡献。跨平台别复制粘贴同一篇。'},\n  {step:'4. 真诚回应负面', detail:'被质疑/踩不删评、不对喷，正面回应并感谢——围观者看的是态度。'},\n  {step:'5. 反馈回流产品', detail:'把社群/评论里的需求与吐槽记进 backlog，采纳后回帖致谢（呼应 R25 数据回流）。'},\n  {step:'6. 复盘转化', detail:'每周看各渠道带来的关注/访问/注册，把有效渠道加倍、无效的停。'},\n];\nconst metrics = [\n  {metric:'关注 / 粉丝增长', why:'公开构建的直接资产，可复用的分发渠道'},\n  {metric:'社区引流访问 / 注册', why:'验证「社区是否真的带来用户」而非虚荣指标'},\n  {metric:'互动率（评论/转发）', why:'反映内容共鸣度，比曝光数更真实'},\n  {metric:'被引用 / 外链', why:'社区内容被转载即自然外链（呼应 R21）'},\n  {metric:'反馈采纳数', why:'社区共建闭环是否跑通（呼应 R25）'},\n];\nconst marketLabel = market==='cn' ? '中国大陆' : (market==='both' ? '海外 + 中国大陆' : '海外/全球');\n\n// ---- 报告 ----\nconst L = [];\nL.push('════════ 社区 / 公开构建增长方案（R23） ════════');\nL.push('产品：'+product+'　类型：'+ptype+'　市场：'+marketLabel);\nL.push('阶段：'+stageInfo[0]+'　域名：'+domain);\nL.push('');\nL.push('【一、公开构建主线】');\nL.push('  '+stageInfo[0]+'：'+stageInfo[1]);\nL.push('  更新节奏：'+calendar.cadence);\ncalendar.weeks.forEach(w=>L.push(' · '+w[0]+' —— '+w[1]+'（帖型：'+w[2].join('/')+'）'));\nL.push('  '+calendar.note);\nL.push('');\nL.push('【二、社区渠道矩阵】（按市场筛选，★ 越多越优先）');\nchannels.forEach(c=>{\n  L.push('  '+c.valueStars+'  '+c.name+'（'+c.region+'）');\n  L.push('        互动：'+c.how);\n  L.push('        节奏：'+c.cadence+'　红线：'+c.redline);\n});\nL.push('');\nL.push('【三、社区互动 SOP】');\nsop.forEach(s=>L.push('  '+s.step+': '+s.detail));\nL.push('');\nL.push('【四、可复制帖文模板】（{...} 处替换为你的实际内容）');\ntemplates.forEach(t=>{\n  L.push('  ▸ '+t.name+'（'+t.purpose+'）');\n  t.body.split('\\n').forEach(line=>L.push('      '+line));\n  L.push('');\n});\nL.push('【五、该盯的增长指标】');\nmetrics.forEach(m=>L.push(' · '+m.metric+' —— '+m.why));\nL.push('');\nL.push('提示：把「社区反馈 → backlog → 回帖致谢」跑成习惯，公开构建本身就是最便宜的增长渠道。');\nconst report = L.join('\\n');\n\n// ---- community.html ----\nconst chRows = channels.map(c=>'<div class=\"ch\"><div class=\"top\"><span class=\"stars\">'+c.valueStars+'</span><span class=\"nm\">'+esc(c.name)+'</span><span class=\"region\">'+esc(c.region)+'</span></div><div class=\"meta\">互动：'+esc(c.how)+'<br>节奏：'+esc(c.cadence)+'</div><div class=\"red\">⛔ '+esc(c.redline)+'</div></div>').join('');\nconst tplCards = templates.map(t=>'<div class=\"tpl\"><div class=\"h\">'+esc(t.name)+'<span class=\"tag\">'+esc(t.purpose)+'</span></div><pre>'+esc(t.body)+'</pre></div>').join('');\nconst weekRows = calendar.weeks.map(w=>'<li><b>'+esc(w[0])+'</b> — '+esc(w[1])+' <span class=\"tag\">'+esc(w[2].join(' / '))+'</span></li>').join('');\nconst sopItems = sop.map(s=>'<li><b>'+esc(s.step)+'</b> '+esc(s.detail)+'</li>').join('');\nconst metricItems = metrics.map(m=>'<li><b>'+esc(m.metric)+'</b> — '+esc(m.why)+'</li>').join('');\nconst html = '<!DOCTYPE html><html lang=\"zh\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>社区 / 公开构建增长方案 · '+esc(product)+'</title><style>body{font-family:-apple-system,\"Segoe UI\",Roboto,\"Microsoft YaHei\",sans-serif;margin:0;background:#17131b;color:#fffdf9;line-height:1.65;padding:32px 20px 60px}.wrap{max-width:920px;margin:0 auto}h1{font-size:26px;margin:0 0 6px}h2{font-size:18px;margin:32px 0 12px;padding-left:10px;border-left:4px solid #8b6ef0}.meta{color:#8b6ef0;font-size:13px;margin-bottom:24px}.card{background:#17131b;border:1px solid #4a25c9;border-radius:12px;padding:14px}.tag{display:inline-block;background:#4a25c9;color:#f1ece2;border-radius:6px;padding:1px 8px;font-size:11px;margin-left:8px}.tpl{background:#17131b;border:1px solid #4a25c9;border-radius:12px;padding:12px 14px;margin:10px 0}.tpl-h{font-weight:700;margin-bottom:8px}pre{white-space:pre-wrap;background:#17131b;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#fffdf9;margin:0;font-family:ui-monospace,Menlo,Consolas,monospace}.ch{background:#17131b;border:1px solid #4a25c9;border-radius:12px;padding:11px 13px;margin:8px 0}.stars{color:#8b6ef0;letter-spacing:1px}.red{color:#8b6ef0;margin-top:3px;font-size:11px}.sub{color:#8b6ef0;font-size:11px}ul{padding-left:20px}li{margin:6px 0}</style></head><body><div class=\"wrap\"><h1>社区 / 公开构建增长方案</h1><div class=\"meta\">'+esc(product)+' · '+esc(marketLabel)+' · 阶段：'+esc(stageInfo[0])+'</div><h2>一、30 天公开构建日历</h2><div class=\"card\"><ul>'+weekRows+'</ul></div><h2>二、社区渠道矩阵</h2>'+chRows+'<h2>三、社区互动 SOP</h2><div class=\"card\"><ul>'+sopItems+'</ul></div><h2>四、可复制帖文模板</h2>'+tplCards+'<h2>五、该盯的增长指标</h2><div class=\"card\"><ul>'+metricItems+'</ul></div></div></body></html>';\n\n// ---- 落盘 ----\nlet files = [];\ntry {\n  const SITES = '/home/node/sites';\n  const outDir = path.join(SITES, '_community', slug);\n  fs.mkdirSync(outDir, {recursive:true});\n  fs.writeFileSync(path.join(outDir,'community.html'), html);\n  const plan = {product:product, productType:ptype, market:market, marketLabel:marketLabel, stage:stage,\n    stageLabel:stageInfo[0], stageFocus:stageInfo[1], channels:channels, templates:templates,\n    calendar:calendar, sop:sop, metrics:metrics};\n  fs.writeFileSync(path.join(outDir,'plan.json'), JSON.stringify(plan, null, 2));\n  files = ['_community/'+slug+'/community.html', '_community/'+slug+'/plan.json'];\n} catch(e){ /* 路径不可写时忽略 */ }\n\nconst planObj = {product:product, marketLabel:marketLabel, stageLabel:stageInfo[0], stageFocus:stageInfo[1],\n  channels:channels.map(c=>({name:c.name,region:c.region,value:c.value,how:c.how,cadence:c.cadence,redline:c.redline})),\n  calendar:calendar, templates:templates.map(t=>({name:t.name,purpose:t.purpose,body:t.body})),\n  sop:sop, metrics:metrics};\nreturn [{ json: { report: report, plan: planObj, files: files } }];\n"
+      }
+    },
+    {
+      "id": "a720a0e9-27f9-5553-ad34-72af6b517be0",
+      "name": "Code: Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nlet inp = {};\ntry { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString();\nlet report = ''; try { report = ($('Code: Generate').first().json.report) || ''; } catch (e) {}\nlet plan = {}; try { plan = ($('Code: Generate').first().json.plan) || {}; } catch (e) {}\nlet files = []; try { files = ($('Code: Generate').first().json.files) || []; } catch (e) {}\nconst payload = {\n  jobId: jobId, slug: '', url: '', dns: '',\n  status: report ? 'community-done' : 'community-partial',\n  result: report, plan: plan, files: files,\n  log: report ? '方案已生成' : '流程已触发，但报告内容暂未生成'\n};\ntry {\n  const dir = '/home/node/sites/_bridge_cb';\n  fs.mkdirSync(dir, { recursive: true });\n  fs.writeFileSync(dir + '/' + (jobId || 'unknown') + '.json', JSON.stringify(payload, null, 2));\n} catch (e) { /* 忽略 */ }\nreturn [{ json: { ok: true, jobId: jobId } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code: Generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generate": {
+      "main": [
+        [
+          {
+            "node": "Code: Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

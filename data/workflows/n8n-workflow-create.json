@@ -1,0 +1,736 @@
+{
+  "name": "独立站快速创建（含 Coding Agent）",
+  "nodes": [
+    {
+      "name": "Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        560
+      ],
+      "parameters": {
+        "formTitle": "新建独立站 · 需求收集（自动调用 Coding Agent）",
+        "formDescription": "填写需求后自动走：线框图 → 选风格 → 生成脚手架 → Coding Agent 写真实逻辑 → 完成。",
+        "formSubmittedText": "已收到，正在生成并交给 Coding Agent…",
+        "path": "new-site",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "站点名称 *",
+              "fieldType": "string",
+              "requiredField": true,
+              "fieldName": "name"
+            },
+            {
+              "fieldLabel": "英文 slug（留空自动生成）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "slug"
+            },
+            {
+              "fieldLabel": "一句话定位",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "tagline"
+            },
+            {
+              "fieldLabel": "语言",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "language",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "英文 en",
+                    "value": "en"
+                  },
+                  {
+                    "option": "中文 zh-CN",
+                    "value": "zh-CN"
+                  },
+                  {
+                    "option": "日文 ja",
+                    "value": "ja"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "目标用户",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "audience"
+            },
+            {
+              "fieldLabel": "关键词（逗号分隔）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "keywords"
+            },
+            {
+              "fieldLabel": "工具清单（每行：名称|slug|说明）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "tools"
+            },
+            {
+              "fieldLabel": "变现模式",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "monetization",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "免费 free",
+                    "value": "free"
+                  },
+                  {
+                    "option": "广告 ads",
+                    "value": "ads"
+                  },
+                  {
+                    "option": "捐赠 donation",
+                    "value": "donation"
+                  },
+                  {
+                    "option": "免费+付费 freemium",
+                    "value": "freemium"
+                  },
+                  {
+                    "option": "订阅 subscription",
+                    "value": "subscription"
+                  },
+                  {
+                    "option": "买断 lifetime",
+                    "value": "lifetime"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "货币",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "currency",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "USD",
+                    "value": "USD"
+                  },
+                  {
+                    "option": "CNY",
+                    "value": "CNY"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "主题色",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "theme",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "indigo",
+                    "value": "indigo"
+                  },
+                  {
+                    "option": "emerald",
+                    "value": "emerald"
+                  },
+                  {
+                    "option": "sunset",
+                    "value": "sunset"
+                  },
+                  {
+                    "option": "midnight",
+                    "value": "midnight"
+                  },
+                  {
+                    "option": "ocean",
+                    "value": "ocean"
+                  }
+                ],
+                "mode": "list"
+              }
+            },
+            {
+              "fieldLabel": "Coding Agent 提供方",
+              "fieldType": "dropdown",
+              "requiredField": false,
+              "fieldName": "agentProvider",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Claude CLI（推荐）",
+                    "value": "claude"
+                  },
+                  {
+                    "option": "Codex CLI",
+                    "value": "codex"
+                  },
+                  {
+                    "option": "OpenCode CLI",
+                    "value": "opencode"
+                  },
+                  {
+                    "option": "Bridge LLM 兜底（不调外部CLI）",
+                    "value": "bridge"
+                  }
+                ],
+                "mode": "list"
+              },
+              "defaultValue": "claude"
+            },
+            {
+              "fieldLabel": "Agent 模型（可选，留空用默认）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "agentModel",
+              "description": "Claude: sonnet/opus/haiku；Codex: gpt-5-codex 等；OpenCode: provider/model 如 anthropic/claude-sonnet-4"
+            },
+            {
+              "fieldLabel": "模型 API 地址（可选，自定义端点）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "modelBaseUrl",
+              "description": "如 https://your-proxy.example.com/v1 ；留空用各 CLI 默认地址。Claude 注入 ANTHROPIC_BASE_URL，Codex/OpenCode 注入 OPENAI_BASE_URL"
+            },
+            {
+              "fieldLabel": "Agent 额外指令（可选）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "agentExtra"
+            },
+            {
+              "fieldLabel": "用 AI 辅助选择 UI 风格",
+              "fieldType": "boolean",
+              "requiredField": false,
+              "fieldName": "useAI"
+            }
+          ]
+        }
+      },
+      "webhookId": "new-site"
+    },
+    {
+      "name": "Code: Wireframe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst tools = String(f.tools || '').split('\\n').map(s=>s.trim()).filter(Boolean)\n  .map(line => { const p = line.split('|').map(x=>x.trim()); return { n: p[0]||p[1]||'Tool', slug: p[1]||'', desc: p[2]||'' }; });\nconst name = f.name || 'My Site';\nconst wf = `# 线框图：${name}\n## 页面结构\n1. Header / 导航（Logo、工具、定价、博客、语言）\n2. Hero（标题、定位、主 CTA「免费开始」）\n3. 工具网格（${tools.length||'N'} 个工具卡片，hover 预览）\n4. 使用步骤 How-it-works（3 步）\n5. 定价 / 变现（${f.monetization||'ads'}）\n6. FAQ（结构化数据）\n7. Footer（合规链接）`;\nreturn [{ json: { wireframe: wf } }];"
+      }
+    },
+    {
+      "name": "Code: Recommend Style",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst aud = String(f.audience||'').toLowerCase();\nconst mon = String(f.monetization||'ads');\nlet style='minimal', rationale='通用简洁风格，适配大多数工具站', palette='#5b34e6 / #f8fafc';\nif (/child|kid|儿童|玩|fun|game/.test(aud)) { style='playful'; rationale='目标含儿童/娱乐，用活泼配色与圆角'; palette='#8b6ef0 / #8b6ef0'; }\nelse if (/financ|crypto|投资|money|bank/.test(aud)) { style='midnight'; rationale='金融/严肃场景，深色高端感'; palette='#4a25c9 / #5b34e6'; }\nelse if (/creativ|design|艺术|portfolio/.test(aud)) { style='bold'; rationale='创意向，强对比大胆视觉'; palette='#5b34e6 / #5b34e6'; }\nelse if (/saas|professional|企业|business|团队/.test(aud)) { style='glassmorphism'; rationale='SaaS/企业，玻璃拟态显专业'; palette='#8b6ef0 / #fffdf9'; }\nif ((mon==='subscription'||mon==='freemium') && style==='minimal') style='glassmorphism';\nreturn [{ json: { recommendedStyle: style, rationale, palette, style } }];"
+      }
+    },
+    {
+      "name": "IF: Use AI",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        560
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.useAI }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "HTTP: AI Style",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1260,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL || 'https://api.openai.com/v1/chat/completions' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"model\": $env.LLM_MODEL || 'gpt-4o-mini', \"temperature\": 0.3, \"messages\": [ {\"role\":\"system\",\"content\":\"你是资深 UI 设计顾问。只返回 JSON：{\\\"style\\\":\\\"minimal|bold|playful|glassmorphism|midnight\\\",\\\"rationale\\\":\\\"一句话理由\\\"}\"}, {\"role\":\"user\",\"content\":\"站点：\"+ $json.name +\" 目标用户：\"+ $('Form Trigger').first().json.audience +\" 变现：\"+ $('Form Trigger').first().json.monetization +\" 已有推荐：\"+ $json.recommendedStyle +\"。请确认或修正风格。\"} ] } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "Code: Parse AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $('HTTP: AI Style').first().json;\nlet style = $('Code: Recommend Style').first().json.recommendedStyle;\nlet rationale = 'AI 辅助建议';\ntry {\n  const content = (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content) || '';\n  const m = content.match(/\\{[\\s\\S]*\\}/);\n  if (m) { const j = JSON.parse(m[0]); if (j.style) style = j.style; if (j.rationale) rationale = j.rationale; }\n} catch (e) {}\nreturn [{ json: { style, recommendedStyle: style, rationale, aiUsed: true } }];"
+      }
+    },
+    {
+      "name": "Form: Confirm UI Style",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.2,
+      "position": [
+        1860,
+        560
+      ],
+      "parameters": {
+        "formTitle": "选择 UI 设计风格",
+        "formDescription": "AI / 规则推荐：{{ $json.recommendedStyle }} —— {{ $json.rationale }}（配色 {{ $json.palette }}）。\n先在浏览器打开预览，再选择最终风格（bridge 实时渲染，localhost:8788 需与 n8n 同机）：\n• Minimal 简洁:        http://localhost:8788/preview?style=minimal\n• Bold 大胆:           http://localhost:8788/preview?style=bold\n• Playful 活泼:        http://localhost:8788/preview?style=playful\n• Glassmorphism 玻璃:  http://localhost:8788/preview?style=glassmorphism\n• Midnight 深色高端:   http://localhost:8788/preview?style=midnight",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "最终 UI 风格",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldName": "style",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Minimal 简洁",
+                    "value": "minimal"
+                  },
+                  {
+                    "option": "Bold 大胆",
+                    "value": "bold"
+                  },
+                  {
+                    "option": "Playful 活泼",
+                    "value": "playful"
+                  },
+                  {
+                    "option": "Glassmorphism 玻璃拟态",
+                    "value": "glassmorphism"
+                  },
+                  {
+                    "option": "Midnight 深色高端",
+                    "value": "midnight"
+                  }
+                ],
+                "mode": "list"
+              },
+              "defaultValue": "={{ $json.style }}"
+            }
+          ]
+        }
+      },
+      "webhookId": "809b1ee1-2ad6-53fa-a1ab-b8ba2291b2ab"
+    },
+    {
+      "name": "Code: Build Spec",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst c = $('Form: Confirm UI Style').first().json;\nconst style = c.style || 'minimal';\nconst slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'site';\nconst tools = String(f.tools||'').split('\\n').map(s=>s.trim()).filter(Boolean).map(line=>{\n  const p = line.split('|').map(x=>x.trim());\n  const slug = slugify(p[1]||p[0]||'tool');\n  return { name: p[0]||p[1]||'Tool', slug, desc: p[2]||'', icon:'⚙️', keywords:[] };\n});\nconst themeMap = { minimal:'indigo', bold:'sunset', playful:'emerald', glassmorphism:'ocean', midnight:'midnight' };\nconst slug = f.slug ? slugify(f.slug) : slugify(f.name||'site');\nconst spec = {\n  name: f.name, slug, domain: f.domain || '', tagline: f.tagline||'',\n  lang: f.language || 'en', theme: themeMap[style] || 'ocean',\n  audience: String(f.audience||'').split(',').map(s=>s.trim()).filter(Boolean),\n  keywords: String(f.keywords||'').split(',').map(s=>s.trim()).filter(Boolean),\n  tools,\n  monetization: { model: f.monetization||'ads', currency: f.currency||'USD' },\n  legal: { email: '', jurisdiction: 'global' },\n  deploy: { target: 'none' }\n};\nconst outDir = 'C:/Users/nathon.wang/WorkBuddy/2026-10-26-00-00-50/n8n-indie-builder/sites/' + slug;\nconst agentWorkDir = '/home/node/sites/' + slug;\nconst brief = [\n  '# 站点实现简报 (AGENTS.md)',\n  '',\n  '站点名称: ' + f.name,\n  '一句话定位: ' + (f.tagline||'(未填)'),\n  '语言: ' + (f.language||'en'),\n  '目标用户: ' + (f.audience||'(未填)'),\n  '关键词(SEO): ' + (f.keywords||''),\n  '视觉风格: ' + style,\n  '变现模式: ' + (f.monetization||'ads'),\n  '',\n  '## 任务',\n  '1. 阅读 src/pages 下的占位工具页（标记“当前是占位实现”的页面）。',\n  '2. 为每个工具实现**纯前端、可运行**的交互逻辑：不请求任何外部网络、不上传用户数据。',\n  '3. 如需数据，使用浏览器端计算（如字符串处理、本地加解密、随机生成等）。',\n  '4. 保证 SEO（语义化标签、meta、结构化数据）、响应式、可访问性。',\n  '5. 不要改动工程骨架与构建配置，只补全工具页逻辑。',\n  '',\n  '## 工具清单',\n].concat(tools.map(t => '- ' + t.name + (t.desc? '：'+t.desc : ''))).join('\\n')\n + (f.agentExtra ? '\\n\\n## 用户额外指令\\n' + f.agentExtra : '');\nreturn [{ json: { spec, outDir, agentWorkDir, slug, style, brief } }];"
+      }
+    },
+    {
+      "name": "HTTP: /generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2500,
+        560
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"spec\": $json.spec, \"outDir\": $json.outDir, \"brief\": $json.brief, \"style\": $json.style } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "IF: Agent Provider",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2820,
+        560
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Form Trigger').first().json.agentProvider }}",
+              "rightValue": "bridge",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "HTTP: /complete (bridge)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3140,
+        760
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"dir\": $json.outDir, \"brief\": $json.brief, \"style\": $json.style } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "Code: Build Agent Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3140,
+        360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst b = $('Code: Build Spec').first().json;\nconst provider = String(f.agentProvider || 'claude').toLowerCase();\nconst wd = b.agentWorkDir;\nconst model = String(f.agentModel || '').trim();\nconst baseUrl = String(f.modelBaseUrl || '').trim();\nconst prompt = 'Read AGENTS.md in the current directory and implement every tool and page it describes. Produce production-quality Astro + TypeScript. Keep ALL logic client-side only: no external network requests, no data upload. Make the site SEO-friendly and responsive. After editing, if package.json has a build or check script, run it to verify. Summarize what you changed.';\n// 工作目录由 bridge 的 /run 通过 cwd 传入，这里不再拼 cd\nlet cmd;\nif (provider === 'codex') {\n  cmd = \"codex exec '\" + prompt + \"' -s workspace-write -a never -m \" + (model || 'gpt-5-codex');\n} else if (provider === 'opencode') {\n  cmd = \"opencode run '\" + prompt + \"' --dir \" + wd + ' --auto --format json' + (model ? ' -m ' + model : '');\n} else {\n  cmd = \"claude -p '\" + prompt + \"' --allowedTools 'Edit,Write,Read,Bash,Grep,Glob,MultiEdit' --dangerously-skip-permissions --model \" + (model || 'sonnet') + ' --output-format text';\n}\n// 自定义模型地址：通过 /run 的 env 注入（Claude -> ANTHROPIC_BASE_URL；Codex/OpenCode -> OPENAI_BASE_URL）\nconst agentEnv = {};\nif (baseUrl) {\n  if (provider === 'claude') agentEnv.ANTHROPIC_BASE_URL = baseUrl;\n  else { agentEnv.OPENAI_BASE_URL = baseUrl; agentEnv.ANTHROPIC_BASE_URL = baseUrl; }\n}\nreturn [{ json: { agentCommand: cmd, provider: provider, agentWorkDir: wd, agentEnv } }];"
+      }
+    },
+    {
+      "name": "HTTP: Agent Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3460,
+        360
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"via\": \"docker\", \"cwd\": $json.agentWorkDir, \"command\": $json.agentCommand, \"timeout\": 1800, \"env\": $json.agentEnv } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Code: Summarize Create",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3460,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const f = $('Form Trigger').first().json;\nconst gen = $('HTTP: /generate').first().json;\nconst build = $('Code: Build Spec').first().json;\nconst provider = f.agentProvider || 'claude';\n// 只有被路由选中的 agent 分支真正执行，用 .all() 安全取值，避免未执行节点报错\nlet agentOut = '';\nconst cli = $('HTTP: Agent Run').all();\nconst br = $('HTTP: /complete (bridge)').all();\nif (cli.length) agentOut = cli[0].json.stdout || '';\nelse if (br.length) agentOut = JSON.stringify(br[0].json.report || '');\nconst snippet = (typeof agentOut === 'string' ? agentOut : JSON.stringify(agentOut)).slice(0, 1500);\nreturn [{ json: {\n  name: f.name, slug: gen.slug || build.slug,\n  style: $('Form: Confirm UI Style').first().json.style,\n  dir: gen.dir || build.outDir,\n  agentWorkDir: build.agentWorkDir,\n  provider,\n  status: (gen.ok ? '脚手架+Agent 完成' : '脚手架失败'),\n  agentLog: snippet\n} }];"
+      }
+    },
+    {
+      "name": "Form: Done",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.2,
+      "position": [
+        3780,
+        560
+      ],
+      "parameters": {
+        "formTitle": "🎉 独立站已生成（Coding Agent 已完成）",
+        "formDescription": "站点：{{ $json.name }}\\n风格：{{ $json.style }}\\nAgent 提供方：{{ $json.provider }}\\n状态：{{ $json.status }}\\n宿主工程目录：{{ $json.dir }}\\n容器内工作目录：{{ $json.agentWorkDir }}\\n\\n下一步：\\n1) 本地预览：在该目录运行 npm install && npm run dev\\n2) 部署上线：打开另一条工作流「独立站快速部署上线」，填入 slug={{ $json.slug }} 与目标平台\\n\\nAgent 日志片段：\\n{{ $json.agentLog }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "备注（可选）",
+              "fieldType": "string",
+              "requiredField": false,
+              "fieldName": "note"
+            }
+          ]
+        }
+      },
+      "webhookId": "6366726e-fa56-58d9-b5b9-834c60416cd5"
+    }
+  ],
+  "connections": {
+    "Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code: Wireframe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Wireframe": {
+      "main": [
+        [
+          {
+            "node": "Code: Recommend Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Recommend Style": {
+      "main": [
+        [
+          {
+            "node": "IF: Use AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Use AI": {
+      "main": [
+        [
+          {
+            "node": "HTTP: AI Style",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form: Confirm UI Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: AI Style": {
+      "main": [
+        [
+          {
+            "node": "Code: Parse AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Parse AI": {
+      "main": [
+        [
+          {
+            "node": "Form: Confirm UI Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form: Confirm UI Style": {
+      "main": [
+        [
+          {
+            "node": "Code: Build Spec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Spec": {
+      "main": [
+        [
+          {
+            "node": "HTTP: /generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: /generate": {
+      "main": [
+        [
+          {
+            "node": "IF: Agent Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Agent Provider": {
+      "main": [
+        [
+          {
+            "node": "HTTP: /complete (bridge)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Build Agent Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: /complete (bridge)": {
+      "main": [
+        [
+          {
+            "node": "Code: Summarize Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Agent Command": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Agent Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Agent Run": {
+      "main": [
+        [
+          {
+            "node": "Code: Summarize Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Summarize Create": {
+      "main": [
+        [
+          {
+            "node": "Form: Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": null,
+    "instanceId": null
+  },
+  "versionId": "00000000-0000-0000-0000-000000000010",
+  "pinData": {},
+  "tags": [
+    {
+      "name": "indie-site-builder"
+    },
+    {
+      "name": "create"
+    },
+    {
+      "name": "agent"
+    }
+  ]
+}

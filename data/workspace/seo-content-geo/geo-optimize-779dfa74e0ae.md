@@ -1,0 +1,232 @@
+# 站点 SEO/GEO 架构规划
+
+- 技能套件：内容与 GEO
+- 任务：geo-optimize
+- 生成时间：2026/11/1 07:45:10
+- 数据来源：无真实采集，结论为估算
+
+## pageMap
+> 关键词→页面映射数组，每项 {keyword, pageUrl, pageType, intent}（哥飞：一个关键词一个页面，分门别类罗列）
+
+- - keyword: chinese name generator
+  - pageUrl: /
+  - pageType: 转化落地页
+  - intent: 工具型/交易型：用户想立刻生成中文名字
+- - keyword: chinese name generator with meaning
+  - pageUrl: /chinese-name-generator-with-meaning
+  - pageType: SEO长页
+  - intent: 信息型+工具型：要名字同时看含义
+- - keyword: chinese names for boys
+  - pageUrl: /chinese-names-for-boys
+  - pageType: SEO长页
+  - intent: 信息型：为男孩挑选中文名
+- - keyword: chinese names for girls
+  - pageUrl: /chinese-names-for-girls
+  - pageType: SEO长页
+  - intent: 信息型：为女孩挑选中文名
+- - keyword: chinese surname list
+  - pageUrl: /chinese-surnames
+  - pageType: SEO长页
+  - intent: 信息型：了解中国姓氏及英文拼写
+- - keyword: how to choose a chinese name
+  - pageUrl: /how-to-choose-a-chinese-name
+  - pageType: SEO长页
+  - intent: 信息型：选名方法与注意事项
+- - keyword: chinese name meaning and pronunciation
+  - pageUrl: /chinese-name-meaning-and-pronunciation
+  - pageType: SEO长页
+  - intent: 信息型：读音与含义解释
+- - keyword: english to chinese name translation
+  - pageUrl: /english-to-chinese-name
+  - pageType: 转化落地页
+  - intent: 交易型：把英文名转成中文名
+- - keyword: chinese business name generator
+  - pageUrl: /chinese-business-name-generator
+  - pageType: 转化落地页
+  - intent: 交易型：为品牌/公司起中文名
+- - keyword: chinese names for foreigners
+  - pageUrl: /chinese-names-for-foreigners
+  - pageType: SEO长页
+  - intent: 信息型：在华外国人取名场景
+- - keyword: chinese name generator for characters
+  - pageUrl: /chinese-name-generator-for-characters
+  - pageType: 转化落地页
+  - intent: 交易型：小说/游戏角色取名
+- - keyword: chinese naming customs and taboos
+  - pageUrl: /chinese-naming-customs
+  - pageType: SEO长页
+  - intent: 信息型：命名习俗与禁忌
+
+## internalLinkSkeleton
+> 内链骨架：相邻长尾词页面互链矩阵（落实分门别类罗列）
+
+- 说明: 相邻长尾词页面互链矩阵；每页至少链向2个同簇相邻页+1个上级枢纽页，锚文本使用目标页关键词，避免全站页脚堆链。
+- clusters: [{"cluster":"生成器工具簇","hub":"/","pages":["/chinese-name-generator-with-meaning","/english-to-chinese-name","/chinese-business-name-generator","/chinese-name-generator-for-characters"],"links":[{"from":"/","to":["/chinese-name-generator-with-meaning","/english-to-chinese-name"]},{"from":"/chinese-name-generator-with-meaning","to":["/","/chinese-name-meaning-and-pronunciation"]},{"from":"/english-to-chinese-name","to":["/","/chinese-name-generator-with-meaning"]},{"from":"/chinese-business-name-generator","to":["/","/chinese-naming-customs"]},{"from":"/chinese-name-generator-for-characters","to":["/","/chinese-names-for-foreigners"]}]},{"cluster":"按人群选名簇","hub":"/how-to-choose-a-chinese-name","pages":["/chinese-names-for-boys","/chinese-names-for-girls","/chinese-names-for-foreigners"],"links":[{"from":"/how-to-choose-a-chinese-name","to":["/chinese-names-for-boys","/chinese-names-for-girls","/chinese-names-for-foreigners"]},{"from":"/chinese-names-for-boys","to":["/chinese-names-for-girls","/how-to-choose-a-chinese-name"]},{"from":"/chinese-names-for-girls","to":["/chinese-names-for-boys","/how-to-choose-a-chinese-name"]},{"from":"/chinese-names-for-foreigners","to":["/how-to-choose-a-chinese-name","/chinese-surnames"]}]},{"cluster":"知识解释簇","hub":"/chinese-name-meaning-and-pronunciation","pages":["/chinese-surnames","/chinese-naming-customs"],"links":[{"from":"/chinese-name-meaning-and-pronunciation","to":["/chinese-surnames","/chinese-naming-customs"]},{"from":"/chinese-surnames","to":["/chinese-naming-customs","/chinese-name-meaning-and-pronunciation"]},{"from":"/chinese-naming-customs","to":["/chinese-surnames","/how-to-choose-a-chinese-name"]}]}]
+- crossClusterLinks: [{"from":"/chinese-names-for-boys","to":["/chinese-name-generator-with-meaning"]},{"from":"/chinese-names-for-girls","to":["/chinese-name-generator-with-meaning"]},{"from":"/chinese-naming-customs","to":["/chinese-business-name-generator"]},{"from":"/chinese-surnames","to":["/english-to-chinese-name"]}]
+- anchorRule: 锚文本=目标页主关键词原词，单页同锚文本内链不超过1次；工具页链接用动作词（如 generate a Chinese name）。
+
+## metaTemplate
+> title/description 模板（含变量，便于母版复用）
+
+- title: {"tool":"{Keyword} — Free {Brand} Tool","seoLong":"{Keyword}: {ValueProp} | {Brand}","hub":"{Keyword} Guide — How to {Action} | {Brand}"}
+- description: {"tool":"Use {Brand} to {action} in seconds. Get {benefit1} and {benefit2}. Free, no signup.","seoLong":"Learn {keyword} with clear examples: {benefit1}, {benefit2}, and {benefit3}. Includes a free {Brand} generator.","hub":"A practical guide to {keyword}: step-by-step method, common mistakes, and a free tool from {Brand} to try it yourself."}
+- 变量说明: {"Keyword":"页面主关键词原词（首字母大写）","Brand":"MandarinName","ValueProp":"该页独有价值点，如 with pinyin and meaning","Action":"choose / translate / generate","benefit1-3":"页面真实提供的3个具体收益，禁止写空泛词"}
+- 长度约束: {"title":"50–60字符","description":"150–160字符"}
+- 唯一性规则: 每页 title/description 必须唯一，禁止跨页复用同一模板填充后仅换关键词导致重复。
+
+## llmsTxtStructure
+> llms.txt 结构草案（哪些页面可被 AI 引用及其摘要）
+
+- fileLocation: /llms.txt
+- format: Markdown：1个H1 + 引言blockquote + H2分节 + `- [名称](URL): 摘要` 链接列表 + 可选 ## Optional
+- draft: # MandarinName
+
+> MandarinName is a free Chinese name generator for English-speaking users in China. It generates Chinese names with pinyin, meaning, and usage notes.
+
+## Tools
+
+- [Chinese Name Generator](https://example.com/): Generate a Chinese given name with pinyin and meaning in seconds.
+- [Chinese Name Generator with Meaning](https://example.com/chinese-name-generator-with-meaning): Generator output that explains each character's meaning.
+- [English to Chinese Name](https://example.com/english-to-chinese-name): Convert an English name into a natural-sounding Chinese name.
+- [Chinese Business Name Generator](https://example.com/chinese-business-name-generator): Suggest Chinese brand and company names with meaning notes.
+- [Chinese Name Generator for Characters](https://example.com/chinese-name-generator-for-characters): Name fictional characters with Chinese names and meanings.
+
+## Guides
+
+- [How to Choose a Chinese Name](https://example.com/how-to-choose-a-chinese-name): Step-by-step method for picking a Chinese name.
+- [Chinese Names for Boys](https://example.com/chinese-names-for-boys): Common Chinese boy names with meaning and pinyin.
+- [Chinese Names for Girls](https://example.com/chinese-names-for-girls): Common Chinese girl names with meaning and pinyin.
+- [Chinese Names for Foreigners](https://example.com/chinese-names-for-foreigners): Naming advice for foreigners living or working in China.
+- [Chinese Name Meaning and Pronunciation](https://example.com/chinese-name-meaning-and-pronunciation): How to read and interpret Chinese names.
+- [Chinese Surnames](https://example.com/chinese-surnames): Common Chinese surnames with romanization notes.
+- [Chinese Naming Customs and Taboos](https://example.com/chinese-naming-customs): Naming customs and characters to avoid.
+
+## Optional
+
+- [About MandarinName](https://example.com/about): Who builds this tool and how names are generated.
+- 可被AI引用页面: ["/","/chinese-name-generator-with-meaning","/english-to-chinese-name","/chinese-business-name-generator","/chinese-name-generator-for-characters","/how-to-choose-a-chinese-name","/chinese-names-for-boys","/chinese-names-for-girls","/chinese-names-for-foreigners","/chinese-name-meaning-and-pronunciation","/chinese-surnames","/chinese-naming-customs"]
+- 校验要点: ["恰好1个H1且为首个标题","至少1个H2","仅H1/H2，无更深层级","链接格式 `- [名称](URL): 摘要`","摘要约100字符","存在 ## Optional 节","URL 上线后替换为真实域名"]
+
+## answerBlockPlan
+> 每个核心页面应包含的「可独立引用答案块」规划
+
+- - pageUrl: /
+  - blockTitle: What is a Chinese name generator?
+  - targetQuery: chinese name generator
+  - blockSpec: 前40–60词直接作答，自包含134–167词；定义式句式『A Chinese name generator is…』；含1条可溯源事实（如中文名通常为姓+名顺序）
+  - placement: H1下方首屏
+- - pageUrl: /chinese-name-generator-with-meaning
+  - blockTitle: How Chinese name meanings work
+  - targetQuery: chinese name generator with meaning
+  - blockSpec: 解释单字含义如何组合，给出1个示例名字拆解（字+拼音+含义），134–167词自包含
+  - placement: 工具输出区下方
+- - pageUrl: /chinese-names-for-boys
+  - blockTitle: Common Chinese names for boys
+  - targetQuery: chinese names for boys
+  - blockSpec: 列表式答案块，每个名字含汉字/拼音/含义三要素，前40词给出选择要点
+  - placement: H2首段
+- - pageUrl: /chinese-names-for-girls
+  - blockTitle: Common Chinese names for girls
+  - targetQuery: chinese names for girls
+  - blockSpec: 同上，列表式，避免与男孩页重复句式
+  - placement: H2首段
+- - pageUrl: /chinese-surnames
+  - blockTitle: Most common Chinese surnames
+  - targetQuery: chinese surname list
+  - blockSpec: 定义式+列表，说明姓氏在前、常见罗马化拼写差异；不编造排名数字，标注『常见』而非精确名次
+  - placement: H2首段
+- - pageUrl: /how-to-choose-a-chinese-name
+  - blockTitle: How to choose a Chinese name in 4 steps
+  - targetQuery: how to choose a chinese name
+  - blockSpec: 编号步骤块，每步1–2句，整体134–167词，可被AI整段引用
+  - placement: 正文首屏
+- - pageUrl: /chinese-name-meaning-and-pronunciation
+  - blockTitle: How to pronounce Chinese names
+  - targetQuery: chinese name meaning and pronunciation
+  - blockSpec: 拼音+声调说明块，含1个示例；声明拼音非英文发音
+  - placement: H2首段
+- - pageUrl: /english-to-chinese-name
+  - blockTitle: How English names become Chinese names
+  - targetQuery: english to chinese name translation
+  - blockSpec: 说明音译/意译两种路径，各给1例，134–167词
+  - placement: 工具区上方
+- - pageUrl: /chinese-business-name-generator
+  - blockTitle: What makes a good Chinese business name
+  - targetQuery: chinese business name generator
+  - blockSpec: 要点式答案块：易读、寓意、避免歧义；不编造商标/法律结论，提示需自行核查
+  - placement: H2首段
+- - pageUrl: /chinese-names-for-foreigners
+  - blockTitle: Can foreigners use a Chinese name?
+  - targetQuery: chinese names for foreigners
+  - blockSpec: 直接作答块，说明常见做法与场合，前40词给结论
+  - placement: H1下方
+- - pageUrl: /chinese-name-generator-for-characters
+  - blockTitle: Naming fictional characters in Chinese
+  - targetQuery: chinese name generator for characters
+  - blockSpec: 说明角色取名考虑（时代感/性格/读音），给1例
+  - placement: 工具区上方
+- - pageUrl: /chinese-naming-customs
+  - blockTitle: Chinese naming customs and taboos
+  - targetQuery: chinese naming customs and taboos
+  - blockSpec: 要点式块，列常见禁忌（如避讳长辈字），标注为一般习俗非绝对规则
+  - placement: H2首段
+
+## checklist
+> 上线前 SEO/GEO 架构验收清单
+
+- - item: 关键词→页面一一对应
+  - check: 12个关键词各对应唯一URL，无两页争同一主词
+  - severity: FAIL
+- - item: URL规范
+  - check: 小写、连字符、无参数、语义化，与pageMap一致
+  - severity: FAIL
+- - item: title唯一且50–60字符
+  - check: 逐页核对，无重复模板填充
+  - severity: FAIL
+- - item: description唯一且150–160字符
+  - check: 逐页核对
+  - severity: FAIL
+- - item: H1唯一
+  - check: 每页恰好1个H1，与主关键词对应
+  - severity: FAIL
+- - item: 内链矩阵落地
+  - check: 每页≥2条同簇内链+1条上级枢纽链接，锚文本为目标词原词
+  - severity: FAIL
+- - item: 无孤岛页
+  - check: 12页均可从首页3次点击内到达
+  - severity: FAIL
+- - item: 答案块就位
+  - check: 每页首屏含40–60词直接作答段，核心页含134–167词自包含块
+  - severity: FAIL
+- - item: 可索引可摘要
+  - check: 无noindex/nosnippet误设，robots.txt不阻断OAI-SearchBot/PerplexityBot/Googlebot
+  - severity: FAIL
+- - item: llms.txt合规
+  - check: /llms.txt 通过H1唯一、≥1个H2、链接格式、Optional节校验
+  - severity: WARN
+- - item: 结构化数据
+  - check: Organization + WebSite（首页）、Article（长页）；不推荐HowTo，FAQ仅限政府/医疗
+  - severity: WARN
+- - item: AI爬虫策略
+  - check: 训练爬虫与搜索爬虫分开配置，不因阻断训练而失去AI搜索引用
+  - severity: WARN
+- - item: E-E-A-T基础位
+  - check: 作者/团队署名、关于页、联系方式、隐私政策占位就绪
+  - severity: WARN
+- - item: 事实标注
+  - check: 页面中所有数字/排名类表述标注来源或改为定性描述，无编造数据
+  - severity: FAIL
+- - item: 语言一致
+  - check: 面向中国境内英语用户，全站英文，术语统一
+  - severity: WARN
+- - item: 上线后回填
+  - check: 真实域名替换llms.txt与canonical占位；接入GSC验证索引
+  - severity: WARN
+
+## 其他输出
+
+### __missing
+
+
+### __fieldCompliance
+100%

@@ -1,0 +1,179 @@
+{
+  "facts": {
+    "url": "https://www.baidu.com",
+    "https": true,
+    "title": "百度一下，你就知道",
+    "titleLen": 9,
+    "metaDesc": "全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。",
+    "metaDescLen": 61,
+    "canonical": "(缺失)",
+    "robotsMeta": "(无)",
+    "viewport": "(缺失)",
+    "lang": "(缺失)",
+    "h1": [],
+    "h1Count": 0,
+    "h2Count": 0,
+    "imgCount": 19,
+    "imgsMissingAlt": 16,
+    "jsonLdCount": 0,
+    "hasLlmsTxt": false,
+    "hasSitemapHint": false,
+    "textLen": 654367
+  },
+  "findings": [
+    {
+      "severity": "严重",
+      "area": "移动端/视口",
+      "issue": "缺少 viewport meta 标签，移动端无法按设备宽度渲染，移动优先索引下会直接影响移动版体验与索引质量",
+      "evidence": "facts.viewport = \"(缺失)\"；Google 自 2024-07-05 起 100% 使用移动 Googlebot 抓取与索引",
+      "fix": "在 <head> 最前部加入 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">，并回归测试首页在 360/390/414px 宽度下的布局与输入框可用性",
+      "effort": "0.5 小时"
+    },
+    {
+      "severity": "严重",
+      "area": "结构化数据",
+      "issue": "全站首页无任何 JSON-LD 结构化数据，无法获得 Organization / WebSite（含 SearchAction 站内搜索框）等富结果与实体信号",
+      "evidence": "facts.jsonLdCount = 0；页面为搜索引擎首页，天然具备 WebSite + SearchAction 与 Organization 的资格",
+      "fix": "在服务端 HTML 首屏注入两段 JSON-LD：①WebSite（name、url、potentialAction 为 SearchAction，target 指向站内搜索 URL 模板，query-input 为 required name=search_term_string）；②Organization（name、url、logo 绝对 URL、sameAs 指向官方社媒/百科）。用 Rich Results Test 与 Schema.org Validator 双校验",
+      "effort": "2 小时"
+    },
+    {
+      "severity": "严重",
+      "area": "索引/规范化",
+      "issue": "缺少 canonical 标签，首页存在多入口（http/https、带参、尾斜杠、m./www 等变体）时无法显式收敛信号",
+      "evidence": "facts.canonical = \"(缺失)\"；facts.https = true 但未声明规范 URL",
+      "fix": "在 <head> 加入 <link rel=\"canonical\" href=\"https://www.baidu.com/\">，并确保与 hreflang、sitemap、内链使用的 URL 形式完全一致（协议、主机、尾斜杠统一）",
+      "effort": "0.5 小时"
+    },
+    {
+      "severity": "中",
+      "area": "页面结构/可访问性",
+      "issue": "页面无 H1、无 H2，标题层级完全缺失，屏幕阅读器与内容结构解析缺乏主标题锚点",
+      "evidence": "facts.h1Count = 0，facts.h2Count = 0，facts.h1 = []",
+      "fix": "为首页主搜索区增加唯一 H1（如“百度搜索”或品牌主标题），并为下方频道/服务区块补 H2。注意：标题数量非 Google 排名因子，此项按可访问性与可读性最佳实践处理，不作为排名承诺",
+      "effort": "1 小时"
+    },
+    {
+      "severity": "中",
+      "area": "图片",
+      "issue": "19 张图片中 16 张缺少 alt 属性（缺失率 84%），图片搜索与无障碍访问受损",
+      "evidence": "facts.imgCount = 19，facts.imgsMissingAlt = 16",
+      "fix": "为 16 张缺 alt 的图片补写描述性 alt（10–125 字，避免堆砌关键词）；纯装饰性图标改用 alt=\"\" + aria-hidden=\"true\"；同时确认所有 <img> 设置 width/height 以防 CLS",
+      "effort": "2 小时"
+    },
+    {
+      "severity": "中",
+      "area": "国际化/语言声明",
+      "issue": "html 标签缺少 lang 属性，浏览器与辅助技术无法判定页面语言",
+      "evidence": "facts.lang = \"(缺失)\"",
+      "fix": "改为 <html lang=\"zh-CN\">（若存在多语言版本，配合 hreflang 与 x-default 使用）",
+      "effort": "0.2 小时"
+    },
+    {
+      "severity": "中",
+      "area": "抓取/发现",
+      "issue": "未检测到 sitemap 提示（robots.txt 中无 Sitemap 指令或页面无相关引用），站点地图可发现性无法确认",
+      "evidence": "facts.hasSitemapHint = false",
+      "fix": "确认 /robots.txt 存在且包含 Sitemap: 绝对 URL；首页类站点至少提供覆盖频道页/帮助页/产品页的 XML Sitemap（单文件 ≤5 万 URL，均返回 200，lastmod 真实，不含 noindex/重定向 URL），并在 GSC 提交",
+      "effort": "2 小时（含 sitemap 生成与校验）"
+    },
+    {
+      "severity": "低",
+      "area": "AI 爬虫管理",
+      "issue": "未提供 llms.txt，AI 爬虫（训练型 vs 搜索/用户触发型）策略未显式声明",
+      "evidence": "facts.hasLlmsTxt = false",
+      "fix": "如需被 AI 搜索引用，在 robots.txt 中放行 OAI-SearchBot / PerplexityBot 等用户触发型爬虫，并对 GPTBot / Google-Extended / CCBot 等训练型爬虫按业务策略显式 Allow/Disallow；可选发布 /llms.txt 说明站点结构与可引用范围。注意：阻断 Google-Extended 不影响 Google 搜索与 AI Overviews（后者走 Googlebot）",
+      "effort": "1 小时"
+    },
+    {
+      "severity": "低",
+      "area": "标题/摘要",
+      "issue": "title 仅 9 字符、meta description 61 字符，均低于常见展示区间，SERP 展示信息量偏少",
+      "evidence": "facts.titleLen = 9（建议 50–60 字符）；facts.metaDescLen = 61（建议 150–160 字符）",
+      "fix": "品牌首页可保留短 title，但建议补充价值主张（如“百度搜索 - 中文搜索引擎，即时找到所求”）；meta description 扩写至 150–160 字符，突出站内搜索、资讯、地图等核心能力。注意：Google 会按查询重写摘要，此项为展示优化而非排名因子",
+      "effort": "0.5 小时"
+    },
+    {
+      "severity": "低",
+      "area": "性能/CWV",
+      "issue": "Core Web Vitals 真实字段数据无法从 HTML 判定，需实测",
+      "evidence": "输入事实中不含 LCP/INP/CLS 任何字段值；facts.textLen = 654367 提示 DOM/文本体量较大，存在 INP 与 DOM 规模风险（估算，需实测确认）",
+      "fix": "用 CrUX API 或 PSI 拉取 p75 字段数据（LCP ≤2.5s / INP ≤200ms / CLS ≤0.1）；若 INP 超标，优先拆分长任务至 <50ms、审查第三方脚本；若 DOM 元素 >1500，评估精简首屏节点",
+      "effort": "需实测，预估 2–4 小时诊断"
+    }
+  ],
+  "scorecard": {
+    "indexing": 62,
+    "performance": 55,
+    "structuredData": 20,
+    "mobile": 40,
+    "content": 70
+  },
+  "quickWins": [
+    "补 <html lang=\"zh-CN\">（0.2 小时，零风险）",
+    "补 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">（0.5 小时）",
+    "补 <link rel=\"canonical\" href=\"https://www.baidu.com/\">（0.5 小时）",
+    "为 16 张缺 alt 图片补描述性 alt，装饰图用 alt=\"\"（2 小时）",
+    "注入 WebSite + SearchAction 与 Organization 两段 JSON-LD（2 小时）",
+    "在 robots.txt 增加 Sitemap: 指令并在 GSC 提交（1 小时）",
+    "扩写 meta description 至 150–160 字符（0.5 小时）"
+  ],
+  "structuredDataPlan": [
+    {
+      "type": "WebSite",
+      "reason": "首页为站点入口，配合 potentialAction 的 SearchAction 可争取 SERP 站内搜索框；同时为站点建立实体级信号，提升 AI 搜索引用概率（有 schema 的内容进入 AI 答案的概率显著更高）",
+      "priority": "高",
+      "requiredProps": [
+        "name",
+        "url",
+        "potentialAction(SearchAction: target, query-input)"
+      ]
+    },
+    {
+      "type": "Organization",
+      "reason": "建立品牌实体，logo 与 sameAs 可强化知识面板与实体消歧；首页是 Organization 标记的标准落点",
+      "priority": "高",
+      "requiredProps": [
+        "name",
+        "url",
+        "logo(绝对URL)",
+        "sameAs"
+      ]
+    },
+    {
+      "type": "BreadcrumbList",
+      "reason": "首页本身不需要，但站内频道页/帮助页/产品页应统一部署，改善 SERP 路径展示与层级理解",
+      "priority": "中",
+      "requiredProps": [
+        "itemListElement(position, name, item)"
+      ]
+    },
+    {
+      "type": "WebPage",
+      "reason": "为首页提供页面级元信息（name、description、dateModified），与 WebSite 配合形成完整页面语义",
+      "priority": "中",
+      "requiredProps": [
+        "name",
+        "url",
+        "description"
+      ]
+    },
+    {
+      "type": "SoftwareApplication / WebApplication",
+      "reason": "若站内有独立产品页（如百度网盘、地图等 Web 应用），对应落地页应部署，可争取应用类富结果",
+      "priority": "低",
+      "requiredProps": [
+        "name",
+        "applicationCategory",
+        "operatingSystem 或 browserRequirements",
+        "offers"
+      ]
+    },
+    {
+      "type": "不推荐项说明",
+      "reason": "禁止推荐 HowTo（2023-09 富结果已移除）、FAQPage（仅限政府/医疗权威站点）、SpecialAnnouncement（2025-07 已弃用）；首页亦不适用 Product/Article 等页面原型类型",
+      "priority": "—",
+      "requiredProps": []
+    }
+  ]
+}

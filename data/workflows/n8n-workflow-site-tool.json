@@ -1,0 +1,271 @@
+{
+  "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "name": "生成站点（Agent 工具）",
+  "nodes": [
+    {
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Code: Build Spec",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = $('Execute Workflow Trigger').first().json;\nconst q = (raw.query && typeof raw.query === 'object') ? raw.query : raw;\nconst slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'site';\nconst name = q.name || 'My Site';\nconst slug = (q.slug ? slugify(q.slug) : slugify(name));\nconst tools = String(q.tools||'').split('\\n').map(s=>s.trim()).filter(Boolean).map(line=>{\n  const p = line.split('|').map(x=>x.trim());\n  return { name: p[0]||p[1]||'Tool', slug: slugify(p[1]||p[0]||'tool'), desc: p[2]||'', icon:'⚙️', keywords:[] };\n});\nlet style = String(q.style||'').toLowerCase().trim();\nif (!style) {\n  const aud = String(q.audience||'').toLowerCase(); const mon = String(q.monetization||'ads');\n  if (/child|kid|儿童|玩|fun|game/.test(aud)) style='playful';\n  else if (/financ|crypto|投资|money|bank/.test(aud)) style='midnight';\n  else if (/creativ|design|艺术|portfolio/.test(aud)) style='bold';\n  else if (/saas|professional|企业|business|团队/.test(aud)) style='glassmorphism';\n  else style='minimal';\n}\nconst themeMap={minimal:'indigo',bold:'sunset',playful:'emerald',glassmorphism:'ocean',midnight:'midnight'};\nconst spec={ name:q.name||name, slug, domain:q.domain||'', tagline:q.tagline||'', lang:q.language||'en',\n  audience:String(q.audience||'').split(',').map(s=>s.trim()).filter(Boolean),\n  keywords:String(q.keywords||'').split(',').map(s=>s.trim()).filter(Boolean),\n  tools, monetization:{model:q.monetization||'ads',currency:q.currency||'USD'},\n  legal:{email:'',jurisdiction:'global'}, deploy:{target:'none'} };\nconst outDir = 'C:/Users/nathon.wang/WorkBuddy/2026-10-26-00-00-50/n8n-indie-builder/sites/' + slug;\nconst agentWorkDir = '/home/node/sites/' + slug;\nconst brief = [\n  '# 站点实现简报 (AGENTS.md)','',\n  '站点名称: ' + (q.name||name),\n  '一句话定位: ' + (q.tagline||'(未填)'),\n  '语言: ' + (q.language||'en'),\n  '目标用户: ' + (q.audience||'(未填)'),\n  '关键词(SEO): ' + (q.keywords||''),\n  '视觉风格: ' + style,\n  '变现模式: ' + (q.monetization||'ads'),'',\n  '## 任务','1. 阅读 src/pages 下的占位工具页（标记“当前是占位实现”的页面）。',\n  '2. 为每个工具实现**纯前端、可运行**的交互逻辑：不请求任何外部网络、不上传用户数据。',\n  '3. 如需数据，使用浏览器端计算（如字符串处理、本地加解密、随机生成等）。',\n  '4. 保证 SEO（语义化标签、meta、结构化数据）、响应式、可访问性。',\n  '5. 不要改动工程骨架与构建配置，只补全工具页逻辑。','','## 工具清单'\n].concat(tools.map(t => '- ' + t.name + (t.desc? '：'+t.desc : ''))).join('\\n')\n + (q.agentExtra ? '\\n\\n## 用户额外指令\\n' + q.agentExtra : '');\nreturn [{ json: { spec, outDir, agentWorkDir, slug, style, brief,\n  agentProvider: q.agentProvider||'claude', agentModel: q.agentModel||'', modelBaseUrl: q.modelBaseUrl||'', agentExtra: q.agentExtra||'' } }];"
+      }
+    },
+    {
+      "name": "HTTP: /generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"spec\": $json.spec, \"outDir\": $json.outDir, \"brief\": $json.brief, \"style\": $json.style } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "IF: Agent Provider",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Execute Workflow Trigger').first().json.query.agentProvider || $json.agentProvider }}",
+              "rightValue": "bridge",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "HTTP: /complete (bridge)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        680
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"dir\": $json.outDir, \"brief\": $json.brief, \"style\": $json.style } }}",
+        "options": {}
+      }
+    },
+    {
+      "name": "Code: Build Agent Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const q = $('Execute Workflow Trigger').first().json;\nconst b = $('Code: Build Spec').first().json;\nconst provider = String(b.agentProvider || 'claude').toLowerCase();\nconst wd = b.agentWorkDir;\nconst model = String(b.agentModel || '').trim();\nconst baseUrl = String(b.modelBaseUrl || '').trim();\nconst prompt = 'Read AGENTS.md in the current directory and implement every tool and page it describes. Produce production-quality Astro + TypeScript. Keep ALL logic client-side only: no external network requests, no data upload. Make the site SEO-friendly and responsive. After editing, if package.json has a build or check script, run it to verify. Summarize what you changed.';\nlet cmd;\nif (provider === 'codex') {\n  cmd = \"codex exec '\" + prompt + \"' -s workspace-write -a never -m \" + (model || 'gpt-5-codex');\n} else if (provider === 'opencode') {\n  cmd = \"opencode run '\" + prompt + \"' --dir \" + wd + ' --auto --format json' + (model ? ' -m ' + model : '');\n} else {\n  cmd = \"claude -p '\" + prompt + \"' --allowedTools 'Edit,Write,Read,Bash,Grep,Glob,MultiEdit' --dangerously-skip-permissions --model \" + (model || 'sonnet') + ' --output-format text';\n}\nconst agentEnv = {};\nif (baseUrl) {\n  if (provider === 'claude') agentEnv.ANTHROPIC_BASE_URL = baseUrl;\n  else { agentEnv.OPENAI_BASE_URL = baseUrl; agentEnv.ANTHROPIC_BASE_URL = baseUrl; }\n}\nreturn [{ json: { agentCommand: cmd, provider, agentWorkDir: wd, agentEnv } }];"
+      }
+    },
+    {
+      "name": "HTTP: Agent Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8788/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"via\": \"docker\", \"cwd\": $json.agentWorkDir, \"command\": $json.agentCommand, \"timeout\": 1800, \"env\": $json.agentEnv } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Code: Summarize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $('Code: Build Spec').first().json;\nconst gen = $('HTTP: /generate').first().json;\nconst cli = $('HTTP: Agent Run').all();\nconst br = $('HTTP: /complete (bridge)').all();\nlet agentOut = cli.length ? (cli[0].json.stdout||'') : (br.length ? JSON.stringify(br[0].json.report||'') : '');\nconst snippet = (typeof agentOut === 'string' ? agentOut : JSON.stringify(agentOut)).slice(0, 1200);\nconst ok = gen && gen.ok;\nreturn [{ json: {\n  result: (ok ? '✅ 站点「' + b.slug + '」已生成完成（风格 ' + b.style + '，提供方 ' + b.agentProvider + '）。' : '⚠️ 脚手架生成失败。')\n    + '\\n宿主目录: ' + b.outDir + '\\n容器内目录: ' + b.agentWorkDir\n    + '\\n\\nAgent 日志片段:\\n' + snippet\n} }];"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code: Build Spec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Spec": {
+      "main": [
+        [
+          {
+            "node": "HTTP: /generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: /generate": {
+      "main": [
+        [
+          {
+            "node": "IF: Agent Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Agent Provider": {
+      "main": [
+        [
+          {
+            "node": "HTTP: /complete (bridge)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Build Agent Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: /complete (bridge)": {
+      "main": [
+        [
+          {
+            "node": "Code: Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build Agent Command": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Agent Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Agent Run": {
+      "main": [
+        [
+          {
+            "node": "Code: Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateId": null,
+    "instanceId": null
+  },
+  "versionId": "00000000-0000-0000-0000-000000000012",
+  "pinData": {},
+  "tags": [
+    {
+      "name": "indie-site-builder"
+    },
+    {
+      "name": "tool"
+    }
+  ]
+}

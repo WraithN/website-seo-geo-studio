@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>建站助手 · 对话式建站</title>
+<style>
+:root{ /* theme:canonical */
+    --paper:#f6f3ec; --surface:#fffdf9; --surface-2:#f1ece2;
+    --ink:#17131b; --muted:#5f5867;
+    --line:rgba(23,19,27,.10); --line-2:rgba(23,19,27,.06);
+    --accent:#5b34e6; --accent-ink:#4a25c9; --accent-soft:rgba(91,52,230,.10);
+    --ok:#0f9d6b; --ok-soft:rgba(15,157,107,.12);
+    --warn:#b45309; --warn-soft:rgba(180,83,9,.12);
+    --err:#dc2626; --err-soft:rgba(220,38,38,.10);
+    --gold:#c98a16; --gold-soft:rgba(201,138,22,.14);
+    --radius:16px; --radius-lg:22px;
+    --shadow-1:0 2px 8px rgba(23,19,27,.06); --shadow-2:0 12px 32px rgba(23,19,27,.09);
+    --ease:cubic-bezier(0.16,1,0.3,1); --dur-fast:170ms; --dur:320ms;
+    --font-body:"Plus Jakarta Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    --font-disp:"Fraunces","Noto Serif SC","Songti SC",Georgia,serif;
+    /* chat / settings 页的旧变量名，统一指向同一主题 */
+    --bg:#f6f3ec; --fg:#17131b; --primary:#5b34e6; --primary2:#7c5cf0;
+    --user:#5b34e6; --orb1:#c9b8ff; --orb2:#e3d9ff; --glass:0; --dark:0;
+    --font:"Plus Jakarta Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    --serif:"Fraunces","Noto Serif SC","Songti SC",Georgia,serif;
+    --shadow:0 12px 40px rgba(23,19,27,.10);
+  }
+  
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:var(--font);color:var(--fg);background:var(--bg);overflow:hidden;
+    transition:background .5s,color .5s}
+  /* ambient orbs */
+  .orbs{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+  .orb{position:absolute;width:48vmax;height:48vmax;border-radius:50%;filter:blur(90px);opacity:.45;
+    background:radial-gradient(circle at 30% 30%,var(--orb1),transparent 70%);animation:float 20s ease-in-out infinite}
+  .orb.b{background:radial-gradient(circle at 30% 30%,var(--orb2),transparent 70%);right:-12vw;top:18vh;animation-delay:-7s}
+  .orb.c{background:radial-gradient(circle at 30% 30%,var(--primary2),transparent 70%);left:40vw;bottom:-20vh;animation-delay:-13s;opacity:.3}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(4vw,-3vh) scale(1.08)}66%{transform:translate(-3vw,4vh) scale(.96)}}
+  .glass{background:color-mix(in srgb,var(--surface) 72%,transparent);backdrop-filter:blur(22px) saturate(140%);
+    -webkit-backdrop-filter:blur(22px);border:1px solid color-mix(in srgb,var(--fg) 10%,transparent);box-shadow:var(--shadow)}
+  /* topbar */
+  .topbar{position:relative;z-index:2;display:flex;align-items:center;gap:14px;padding:14px 22px;
+    border-bottom:1px solid color-mix(in srgb,var(--fg) 8%,transparent)}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;letter-spacing:.2px}
+  .brand .dot{width:13px;height:13px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary2));box-shadow:0 0 16px var(--primary)}
+  .brand .name{font-family:var(--serif);font-style:italic;font-weight:600;font-size:23px}
+  .brand small{font-weight:500;color:var(--muted);font-size:12px;margin-left:6px;align-self:center}
+  .spacer{flex:1}
+  .themes{display:flex;gap:7px;flex-wrap:wrap}
+  .theme-pill{border:1px solid color-mix(in srgb,var(--fg) 18%,transparent);background:transparent;color:var(--fg);
+    font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;transition:.22s;white-space:nowrap}
+  .theme-pill:hover{transform:translateY(-1px)}
+  .theme-pill.active{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border-color:transparent;
+    box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 45%,transparent)}
+  .navlink{color:var(--muted);font-size:13px;text-decoration:none;border:1px solid color-mix(in srgb,var(--fg) 14%,transparent);
+    padding:6px 12px;border-radius:999px;transition:.2s}
+  .navlink:hover{color:var(--fg);border-color:var(--primary)}
+  /* chat */
+  .chat{position:relative;z-index:1;flex:1;overflow-y:auto;padding:28px 16px 12px;display:flex;flex-direction:column;gap:16px;
+    max-width:880px;width:100%;margin:0 auto;height:calc(100vh - 196px)}
+  .msg{display:flex;gap:12px;align-items:flex-start;max-width:90%;animation:rise .35s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .msg.user{margin-left:auto;flex-direction:row-reverse}
+  .ava{width:38px;height:38px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;font-size:18px;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;box-shadow:var(--shadow)}
+  .msg.user .ava{background:color-mix(in srgb,var(--fg) 85%,transparent);color:var(--bg)}
+  .bubble{padding:13px 16px;border-radius:var(--radius);line-height:1.65;font-size:15px;white-space:pre-wrap;word-break:break-word;
+    background:color-mix(in srgb,var(--surface) 80%,transparent);border:1px solid color-mix(in srgb,var(--fg) 8%,transparent);
+    box-shadow:0 6px 20px rgba(23, 19, 27, .06)}
+  .msg.user .bubble{background:linear-gradient(135deg,var(--user),color-mix(in srgb,var(--user) 70%,var(--primary2)));color:#fff;border:none}
+  .bubble.typing span{display:inline-block;width:7px;height:7px;margin:0 1px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+  .bubble.typing span:nth-child(2){animation-delay:.2s}.bubble.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+  /* choices */
+  .choices{margin-top:10px;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));animation:rise .35s ease both}
+  .choice{text-align:left;cursor:pointer;border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);
+    background:color-mix(in srgb,var(--surface) 55%,transparent);border-radius:14px;padding:13px 14px;transition:.2s;
+    backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(23, 19, 27, .06)}
+  .choice:hover{transform:translateY(-2px);border-color:var(--primary);box-shadow:0 10px 26px color-mix(in srgb,var(--primary) 30%,transparent)}
+  .choice .ct{font-weight:700;font-size:14px}
+  .choice .cd{font-size:12px;color:var(--muted);margin-top:3px}
+  .choice .idx{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;margin-right:8px;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;font-size:12px;font-weight:800;vertical-align:middle}
+  .choice.used{opacity:.5;pointer-events:none}
+  /* job panel */
+  .job{position:relative;z-index:1;max-width:880px;width:100%;margin:0 auto;padding:0 16px}
+  .jobcard{margin-top:14px;border-radius:18px;padding:18px 20px;animation:rise .35s ease both}
+  .jobrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .badge{font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
+  .badge.building{background:color-mix(in srgb,#5b34e6 18%,transparent);color:#5b34e6}
+  .badge.done{background:color-mix(in srgb,#5b34e6 18%,transparent);color:#4a25c9}
+  .badge.error{background:color-mix(in srgb,#5b34e6 16%,transparent);color:#5b34e6}
+  .spin{width:14px;height:14px;border:2px solid color-mix(in srgb,var(--muted) 40%,transparent);border-top-color:var(--primary);
+    border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .jobmsg{margin-top:10px;font-size:14px;color:var(--muted);line-height:1.6}
+  .files{margin-top:10px;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto}
+  .file{font-size:12.5px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 8px;
+    background:color-mix(in srgb,var(--fg) 4%,transparent);border-radius:8px}
+  /* composer */
+  .composer{position:relative;z-index:2;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    border-top:1px solid color-mix(in srgb,var(--fg) 8%,transparent)}
+  .composer-inner{max-width:880px;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
+  textarea{flex:1;resize:none;border:1px solid color-mix(in srgb,var(--fg) 16%,transparent);border-radius:14px;
+    padding:12px 14px;font-family:var(--font);font-size:15px;background:color-mix(in srgb,var(--surface) 70%,transparent);
+    color:var(--fg);max-height:140px;outline:none;transition:.2s}
+  textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent)}
+  .btn{border:none;border-radius:14px;padding:0 18px;height:46px;font-weight:700;font-size:15px;cursor:pointer;color:#fff;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));box-shadow:0 8px 20px color-mix(in srgb,var(--primary) 40%,transparent);transition:.15s}
+  .btn:hover{transform:translateY(-1px)}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .btn.gen{background:linear-gradient(135deg,#5b34e6,#5b34e6)}
+  .quick{max-width:880px;margin:0 auto 8px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{border:1px solid color-mix(in srgb,var(--fg) 22%,transparent);background:transparent;color:var(--muted);font-size:12.5px;
+    padding:6px 12px;border-radius:999px;cursor:pointer;transition:.2s}
+  .chip:hover{color:var(--fg);border-color:var(--primary)}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--fg);color:var(--bg);
+    padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;transition:.3s;pointer-events:none;z-index:9}
+  .toast.show{opacity:1;bottom:108px}
+  .empty{text-align:center;color:var(--muted);margin:auto;padding:34px;max-width:520px}
+  .empty h2{color:var(--fg);font-size:24px;margin:10px 0;font-family:var(--serif);font-style:italic;font-weight:600}
+  .empty .grad{font-size:54px}
+  @media(max-width:640px){.brand small{display:none}.themes .theme-pill{padding:6px 9px;font-size:11px}}
+</style>
+<style id="sidebar-style">
+  /* ===== 流程侧边栏（统一样式，var 兼容两种主题变量） ===== */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;z-index:60;display:flex;flex-direction:column;
+    background:var(--surface,#ffffff);border-right:1px solid var(--line,rgba(23, 19, 27, .10));overflow-y:auto;overscroll-behavior:contain}
+  .sb-brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;flex:0 0 auto}
+  .sb-brand .sb-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--primary,var(--accent,#8b6ef0)),#8b6ef0);box-shadow:0 0 12px var(--primary,var(--accent,#8b6ef0))}
+  .sb-brand .sb-name{font-weight:800;font-size:18px;letter-spacing:.2px;color:var(--fg,var(--ink,#17131b))}
+  .sb-brand small{display:block;font-size:10px;color:var(--muted,#5b34e6);font-weight:500;letter-spacing:.4px}
+  .sb-nav{display:flex;flex-direction:column;gap:2px;padding:4px 12px 22px}
+  .sb-group{font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:var(--muted,#5b34e6);
+    text-transform:uppercase;padding:14px 10px 6px;opacity:.85}
+  .sb-link{display:flex;align-items:center;gap:9px;color:var(--muted,#5b34e6);text-decoration:none;
+    font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:10px;transition:.18s;border:1px solid transparent;line-height:1.2}
+  .sb-link:hover{color:var(--fg,var(--ink,#17131b));background:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 8%,transparent)}
+  .sb-link.active{color:var(--primary,var(--accent,#8b6ef0));border-color:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 30%,transparent);
+    background:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 12%,transparent)}
+  .sb-num{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:6px;font-size:11px;font-weight:800;
+    background:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 14%,transparent);color:var(--primary,var(--accent,#8b6ef0));flex:0 0 auto}
+  .sb-link.active .sb-num{background:var(--primary,var(--accent,#8b6ef0));color:#fff}
+  @media(min-width:861px){body{padding-left:230px !important}}
+  @media(max-width:860px){
+    .sidebar{position:sticky;top:0;left:auto;bottom:auto;width:100%;height:auto;flex-direction:row;align-items:center;gap:8px;
+      border-right:none;border-bottom:1px solid var(--line,rgba(23, 19, 27, .10));overflow-x:auto;overflow-y:hidden;padding:8px 12px}
+    .sb-brand{padding:0 8px 0 4px;flex:0 0 auto}.sb-brand small{display:none}
+    .sb-nav{flex-direction:row;gap:6px;padding:0;align-items:center}
+    .sb-group{display:none}
+    .sb-link{white-space:nowrap;padding:7px 11px;font-size:12.5px}
+    body{padding-left:0 !important}
+  }
+</style>
+</head>
+<body>
+  <div class="orbs"><div class="orb"></div><div class="orb b"></div><div class="orb c"></div></div>
+
+  <aside class="sidebar">
+    <div class="sb-brand"><span class="sb-dot"></span><div><span class="sb-name">建站助手</span><small>INDIE SITE BUILDER</small></div></div>
+    <nav class="sb-nav">
+      <div class="sb-group">工作台</div>
+      <a class="sb-link active" href="/chat" aria-current="page">对话</a>
+            <div class="sb-group">增长流程（按流程链条排序）</div>
+      <a class="sb-link" href="/research"><span class="sb-num">1</span>需求调研</a>
+      <a class="sb-link" href="/product"><span class="sb-num">2</span>新建独立站产品</a>
+      <a class="sb-link" href="/create"><span class="sb-num">3</span>创建站点</a>
+      <a class="sb-link" href="/content"><span class="sb-num">4</span>内容生产</a>
+      <a class="sb-link" href="/seo"><span class="sb-num">5</span>SEO 优化</a>
+      <a class="sb-link" href="/compliance"><span class="sb-num">6</span>合规优化</a>
+      <a class="sb-link" href="/techseo"><span class="sb-num">7</span>技术SEO</a>
+      <a class="sb-link" href="/deploy"><span class="sb-num">8</span>部署上线</a>
+      <a class="sb-link" href="/backlink"><span class="sb-num">9</span>外链推广</a>
+      <a class="sb-link" href="/community"><span class="sb-num">10</span>社区增长</a>
+      <a class="sb-link" href="/monetize"><span class="sb-num">11</span>变现设计</a>
+      <a class="sb-link" href="/monitor"><span class="sb-num">12</span>监控闭环</a>
+      <div class="sb-group">系统</div>
+      <a class="sb-link" href="/settings">设置</a>
+    </nav>
+  </aside>
+<main class="chat" id="chat">
+    <div class="empty" id="empty">
+      <div class="grad">🛠️</div>
+      <h2>想做什么样的独立站？</h2>
+      <p>我会用轻松的问答收集需求，遇到选项时直接给你卡片挑；确定后点「🚀 生成」一键建站。</p>
+    </div>
+  </main>
+
+  <section class="job" id="jobWrap" hidden>
+    <div class="jobcard glass" id="jobCard"></div>
+  </section>
+
+  <footer class="composer">
+    <div class="quick">
+      <button class="chip" data-q="给我一个示例吧，比如一个中文小工具箱">💡 给我一个示例</button>
+      <button class="chip" data-q="帮我看看 5 种 UI 风格分别适合什么场景？">🎨 推荐风格</button>
+      <button class="chip" data-q="🚀 生成站点">🚀 直接生成</button>
+    </div>
+    <div class="composer-inner">
+      <textarea id="input" rows="1" placeholder="描述你的建站想法，或回答上一步的问题…"></textarea>
+      <button class="btn gen" id="genBtn" title="汇总对话并生成站点">🚀 生成</button>
+      <button class="btn" id="sendBtn">发送</button>
+    </div>
+  </footer>
+  <div class="toast" id="toast"></div>
+
+<script>
+const THEMES = {
+  minimal:    {bg:"#f6f7fb", surface:"#ffffff", fg:"#17131b", muted:"#5b34e6", primary:"#8b6ef0", primary2:"#8b6ef0", radius:"18px", glass:0, dark:0, font:"'Plus Jakarta Sans',Inter,system-ui,sans-serif", user:"#8b6ef0", orb1:"#f1ece2", orb2:"#f1ece2"},
+  bold:       {bg:"#fffdf9", surface:"#ffffff", fg:"#1c1917", muted:"#4a25c9", primary:"#5b34e6", primary2:"#5b34e6", radius:"10px", glass:0, dark:0, font:"'Archivo Black','Arial Black',system-ui,sans-serif", user:"#5b34e6", orb1:"#f1ece2", orb2:"#8b6ef0"},
+  playful:    {bg:"#fffdf9", surface:"#ffffff", fg:"#17131b", muted:"#4a25c9", primary:"#5b34e6", primary2:"#5b34e6", radius:"26px", glass:0, dark:0, font:"'Baloo 2','Comic Sans MS',system-ui,sans-serif", user:"#5b34e6", orb1:"#8b6ef0", orb2:"#f1ece2"},
+  glassmorphism:{bg:"radial-gradient(1200px 700px at 10% 0%,#8b6ef0 0%,#5b34e6 55%,#5b34e6 100%)", surface:"rgba(255,255,255,0.16)", fg:"#17131b", muted:"#4a25c9", primary:"#ffffff", primary2:"#fffdf9", radius:"22px", glass:1, dark:0, font:"'Plus Jakarta Sans',Inter,system-ui,sans-serif", user:"#ffffff", orb1:"#f1ece2", orb2:"#8b6ef0"},
+  midnight:   {bg:"#070b18", surface:"#17131b", fg:"#fffdf9", muted:"#8b6ef0", primary:"#5b34e6", primary2:"#8b6ef0", radius:"16px", glass:0, dark:1, font:"'Plus Jakarta Sans',Inter,system-ui,sans-serif", user:"#5b34e6", orb1:"#5b34e6", orb2:"#8b6ef0"},
+};
+const STATUS = {submitted:["已提交","",false], building:["建站中","building",true], done:["已完成","done",false], error:["失败","error",false]};
+let sessionId = (crypto.randomUUID && crypto.randomUUID()) || ("s"+Date.now()+Math.random().toString(36).slice(2));
+let history = [];
+let busy = false;
+let pollTimer = null;
+
+function applyTheme(key){
+  const t=THEMES[key], r=document.documentElement.style;
+  r.setProperty("--bg",t.bg);r.setProperty("--surface",t.surface);r.setProperty("--fg",t.fg);
+  r.setProperty("--muted",t.muted);r.setProperty("--primary",t.primary);r.setProperty("--primary2",t.primary2);
+  r.setProperty("--radius",t.radius);r.setProperty("--glass",t.glass);r.setProperty("--dark",t.dark);r.setProperty("--font",t.font);
+  r.setProperty("--user-bubble",t.user);r.setProperty("--orb1",t.orb1);r.setProperty("--orb2",t.orb2);
+  document.querySelectorAll(".theme-pill").forEach(p=>p.classList.toggle("active",p.dataset.theme===key));
+  try{localStorage.setItem("site-builder-theme",key);}catch(e){}
+}
+// 页面默认主题在加载时应用（不再在顶栏暴露切换按钮）
+applyTheme(localStorage.getItem("site-builder-theme")||"minimal");
+
+const chat=document.getElementById("chat"), empty=document.getElementById("empty");
+const input=document.getElementById("input"), sendBtn=document.getElementById("sendBtn"), genBtn=document.getElementById("genBtn");
+const toast=document.getElementById("toast");
+function showToast(m){toast.textContent=m;toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),2200);}
+
+function addMsg(role,text){
+  if(empty)empty.remove();
+  const wrap=document.createElement("div");wrap.className="msg "+(role==="user"?"user":"bot");
+  const ava=document.createElement("div");ava.className="ava";ava.textContent=role==="user"?"🙂":"🛠️";
+  const bub=document.createElement("div");bub.className="bubble";bub.textContent=text||"";
+  wrap.append(ava,bub);chat.appendChild(wrap);chat.scrollTop=chat.scrollHeight;
+  return bub;
+}
+function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px";}
+input.addEventListener("input",autoGrow);
+input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
+
+const CHOICES_RE=/\[CHOICES\]\s*(\{[\s\S]*\})\s*$/;
+function parseChoices(text){
+  const m=text.match(CHOICES_RE);
+  if(!m)return null;
+  try{const data=JSON.parse(m[1]);const body=text.slice(0,m.index).replace(/\n+$/,"");return {body,data};}catch(e){return null;}
+}
+function renderChoices(data,into){
+  into.innerHTML="";
+  if(data.question){const q=document.createElement("div");q.style.cssText="font-size:13px;color:var(--muted);margin:2px 2px 6px";q.textContent=data.question;into.appendChild(q);}
+  (data.options||[]).forEach((o,i)=>{
+    const c=document.createElement("button");c.className="choice";
+    c.innerHTML=`<span class="idx">${i+1}</span><span class="ct">${o.label}</span>`+(o.desc?`<div class="cd">${o.desc}</div>`:"");
+    c.onclick=()=>{into.querySelectorAll(".choice").forEach(x=>x.classList.add("used"));
+      const pick=o.label; addMsg("user","我选："+pick); history.push({role:"user",content:pick}); send(pick);};
+    into.appendChild(c);
+  });
+}
+
+async function send(preset){
+  const text=(preset||input.value).trim(); if(!text||busy)return;
+  if(!preset){input.value="";autoGrow();}
+  addMsg("user",text); history.push({role:"user",content:text});
+  const bub=addMsg("bot",""); const typing=document.createElement("span");
+  bub.classList.add("typing"); bub.append(typing,document.createTextNode("正在输入"));
+  busy=true; sendBtn.disabled=true; genBtn.disabled=true;
+  try{
+    const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message:text,sessionId,history:history.slice(0,-1)})});
+    const reader=res.body.getReader(), dec=new TextDecoder(); let buf="", full="", choicesShown=false;
+    const box=document.createElement("div"); box.className="choices"; bub.after(box);
+    while(true){const {done,value}=await reader.read(); if(done)break; buf+=dec.decode(value,{stream:true});
+      let i; while((i=buf.indexOf("\n"))>=0){const line=buf.slice(0,i).trim(); buf=buf.slice(i+1);
+        if(line.startsWith("data:")){const d=line.slice(5).trim();
+          if(d==="[DONE]"){bub.classList.remove("typing");bub.textContent=full.replace(/\[CHOICES\][\s\S]*$/,"");}
+          else{try{const j=JSON.parse(d); if(j.token){full+=j.token;
+            const live=full.replace(/\[CHOICES\][\s\S]*$/,""); bub.textContent=live; chat.scrollTop=chat.scrollHeight;
+            if(!choicesShown){const pc=parseChoices(full); if(pc){bub.textContent=pc.body; renderChoices(pc.data,box); choicesShown=true;}}}}catch(e){}}}}}
+    if(!choicesShown){bub.textContent=full.replace(/\[CHOICES\][\s\S]*$/,"");}
+    history.push({role:"assistant",content:full.replace(/\[CHOICES\][\s\S]*$/,"")});
+  }catch(e){ bub.classList.remove("typing"); bub.textContent="⚠️ 连接失败："+e.message; }
+  busy=false; sendBtn.disabled=false; genBtn.disabled=false; chat.scrollTop=chat.scrollHeight;
+}
+
+genBtn.addEventListener("click",async()=>{
+  if(busy)return;
+  if(history.length===0){showToast("先和我聊聊你的想法吧～");return;}
+  genBtn.disabled=true; showToast("正在汇总需求并生成站点…");
+  const bub=addMsg("bot","🔧 正在解析对话、提取字段并触发建站流水线…"); chat.scrollTop=chat.scrollHeight;
+  try{
+    const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({conversation:history,sessionId})});
+    const j=await r.json();
+    if(j.ok){bub.textContent="✅ "+j.message; history.push({role:"assistant",content:bub.textContent}); startJob(j.jobId);}
+    else{bub.textContent="⚠️ 生成失败："+(j.error||j.message||"未知错误");}
+  }catch(e){bub.textContent="⚠️ 请求失败："+e.message;}
+  genBtn.disabled=false;
+});
+
+function startJob(jobId){
+  const wrap=document.getElementById("jobWrap"), card=document.getElementById("jobCard");
+  wrap.hidden=false; renderJob({status:"submitted"});
+  if(pollTimer)clearInterval(pollTimer);
+  pollTimer=setInterval(()=>pollJob(jobId),2500);
+  pollJob(jobId);
+}
+async function pollJob(jobId){
+  try{
+    const r=await fetch("/api/job/"+jobId); const j=await r.json();
+    if(j.ok){renderJob(j.job); if(["done","error"].includes(j.job.status)&&pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+  }catch(e){}
+}
+function renderJob(job){
+  const card=document.getElementById("jobCard");
+  const [label,cls,spin]=STATUS[job.status]||STATUS.submitted;
+  const files=(job.files||[]).slice(0,40).map(f=>`<div class="file">${f}</div>`).join("");
+  card.innerHTML=`
+    <div class="jobrow">
+      <span class="badge ${cls}">${label}</span>
+      ${spin?`<span class="spin"></span>`:""}
+      <span style="font-size:12px;color:var(--muted)">任务 ${job.id||""}</span>
+    </div>
+    <div class="jobmsg">${job.result? escapeHtml(job.result) : (job.error? "⚠️ "+escapeHtml(job.error) : "已提交到 n8n 流水线，正在等待处理…")}</div>
+    ${job.n8n_body?`<div class="jobmsg" style="opacity:.7">n8n 回执：${escapeHtml(job.n8n_body.slice(0,200))}</div>`:""}
+    ${files?`<div class="files">${files}</div>`:""}
+    ${job.url?`<a class="navlink" href="${job.url}" target="_blank" rel="noopener">🌐 访问站点 ${job.url}</a>`:""}
+  `;
+  document.getElementById("jobWrap").scrollIntoView({behavior:"smooth"});
+}
+function escapeHtml(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{input.value=c.dataset.q;autoGrow();input.focus();}));
+window.addEventListener("load",()=>{const w=addMsg("bot","你好！我是你的建站助手 🛠️ 想做一个什么样的独立站？先告诉我它的名字和大概用途吧～");
+  history.push({role:"assistant",content:w.textContent});});
+</script>
+
+
+
+
+
+<!-- ORCH:BEGIN 编排查看标签页（本页调用的 n8n 流程与技能） -->
+<style>
+  .orch-tab{position:fixed;right:0;top:34%;z-index:70;writing-mode:vertical-rl;letter-spacing:.08em;
+    padding:14px 9px;border:1px solid var(--line,rgba(23,19,27,.12));border-right:0;border-radius:12px 0 0 12px;
+    background:var(--surface,#fffdf9);color:var(--accent-ink,#4a25c9);cursor:pointer;
+    font:600 12.5px/1 var(--font-body,"PingFang SC","Microsoft YaHei",sans-serif);
+    box-shadow:var(--shadow-1,0 2px 8px rgba(23,19,27,.08));transition:var(--dur-fast,170ms)}
+  .orch-tab:hover{background:var(--accent-soft,rgba(91,52,230,.10));color:var(--accent,#5b34e6)}
+  .orch-mask{position:fixed;inset:0;z-index:80;background:rgba(23,19,27,.34);backdrop-filter:blur(2px)}
+  .orch-mask[hidden]{display:none}
+  .orch-panel{position:fixed;top:0;right:0;bottom:0;width:min(460px,94vw);z-index:90;overflow:auto;
+    background:var(--surface,#fffdf9);border-left:1px solid var(--line,rgba(23,19,27,.12));
+    box-shadow:var(--shadow-2,0 12px 32px rgba(23,19,27,.16));padding:22px 24px 48px;
+    font-family:var(--font-body,"PingFang SC","Microsoft YaHei",sans-serif);color:var(--ink,#17131b)}
+  .orch-panel[hidden]{display:none}
+  .orch-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+  .orch-head b{font-size:18px;display:block}
+  .orch-head span{display:block;margin-top:4px;font-size:12.5px;color:var(--muted,#5f5867)}
+  .orch-x{margin-left:auto;border:1px solid var(--line,rgba(23,19,27,.12));background:var(--surface-2,#f1ece2);
+    color:var(--ink,#17131b);border-radius:999px;width:30px;height:30px;cursor:pointer;font-size:14px;flex:none}
+  .orch-sec{margin-top:20px}
+  .orch-sec h4{margin:0 0 10px;font-size:13px;letter-spacing:.06em;color:var(--accent,#5b34e6);text-transform:uppercase}
+  .orch-card{border:1px solid var(--line,rgba(23,19,27,.12));border-radius:var(--radius,14px);padding:12px 14px;margin-bottom:10px;background:var(--surface-2,#f1ece2)}
+  .orch-card b{font-size:14px}
+  .orch-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;
+    background:var(--accent-soft,rgba(91,52,230,.12));color:var(--accent-ink,#4a25c9)}
+  .orch-meta{margin-top:6px;font-size:12px;color:var(--muted,#5f5867)}
+  .orch-desc{margin-top:6px;font-size:12.5px;color:var(--muted,#5f5867);line-height:1.6}
+  .orch-task{margin-top:8px;padding-left:12px;border-left:2px solid var(--accent,#5b34e6)}
+  .orch-task b{font-size:13px}
+  .orch-empty{font-size:12.5px;color:var(--muted,#5f5867);padding:10px 12px;border:1px dashed var(--line,rgba(23,19,27,.16));border-radius:var(--radius,14px)}
+  .orch-note{margin-top:18px;font-size:12.5px;line-height:1.7;color:var(--muted,#5f5867);
+    background:var(--accent-soft,rgba(91,52,230,.08));border-radius:var(--radius,14px);padding:12px 14px}
+</style>
+<button class="orch-tab" id="orchTab" type="button" title="查看本页调用的 n8n 流程与技能">查看 · n8n / 技能</button>
+<div class="orch-mask" id="orchMask" hidden></div>
+<aside class="orch-panel" id="orchPanel" hidden aria-label="编排查看">
+  <div class="orch-head">
+    <div><b>本页编排</b><span id="orchSub"></span></div>
+    <button class="orch-x" id="orchClose" type="button" aria-label="关闭">✕</button>
+  </div>
+  <div id="orchBody"></div>
+</aside>
+<script id="orchData" type="application/json">{"page":"chat","step":0,"label":"对话式建站","phase":"工作台","note":"对话式建站由 n8n Chat Trigger + Agent 驱动，Agent 内部再调用建站工具工作流（生成站点 / 部署）。","workflows":[{"slug":"n8n-workflow-chat-create","name":"独立站创建（对话式 Agent）","nodes":5,"hook":"","trigger":"对话触发","types":"Chat Trigger → AI Agent → LLM → Memory → Workflow Tool"}],"skills":[]}</script>
+<script>
+(function(){
+  var d = JSON.parse(document.getElementById('orchData').textContent);
+  var tab=document.getElementById('orchTab'), panel=document.getElementById('orchPanel'),
+      mask=document.getElementById('orchMask'), box=document.getElementById('orchBody'),
+      sub=document.getElementById('orchSub'), x=document.getElementById('orchClose');
+  function el(t,c,txt){var n=document.createElement(t); if(c)n.className=c; if(txt!=null)n.textContent=txt; return n;}
+  function build(){
+    sub.textContent = (d.step? ('第 '+d.step+' 步 · ') : '') + d.phase + ' · ' + d.label;
+    box.innerHTML='';
+    var s1=el('div','orch-sec'); s1.appendChild(el('h4','','n8n 流程'));
+    if(!d.workflows.length){ s1.appendChild(el('div','orch-empty','本页不经过 n8n，由后台技能引擎直接执行。')); }
+    d.workflows.forEach(function(w){
+      var c=el('div','orch-card'), t=el('div','');
+      t.appendChild(el('b','',w.name)); t.appendChild(el('span','orch-badge',w.trigger));
+      c.appendChild(t);
+      c.appendChild(el('div','orch-meta','节点 '+w.nodes+' 个'+(w.hook?(' · Webhook /'+w.hook):'')+(w.types?(' · '+w.types):'')));
+      s1.appendChild(c);
+    });
+    box.appendChild(s1);
+    var s2=el('div','orch-sec'); s2.appendChild(el('h4','','技能套件与任务'));
+    if(!d.skills.length){ s2.appendChild(el('div','orch-empty','本页不直接调用 SEO/GEO 技能套件。')); }
+    d.skills.forEach(function(s){
+      var c=el('div','orch-card'), t=el('div','');
+      t.appendChild(el('b','',s.name)); t.appendChild(el('span','orch-badge',s.slug));
+      c.appendChild(t);
+      c.appendChild(el('div','orch-desc',s.desc+(s.covers?('（'+s.covers+'）'):'')));
+      s.tasks.forEach(function(k){
+        var w=el('div','orch-task'); w.appendChild(el('b','',k.name));
+        w.appendChild(el('div','orch-desc',k.desc)); c.appendChild(w);
+      });
+      s2.appendChild(c);
+    });
+    box.appendChild(s2);
+    if(d.note){ box.appendChild(el('div','orch-note',d.note)); }
+  }
+  function open(){ build(); panel.hidden=false; mask.hidden=false; document.body.style.overflow='hidden'; }
+  function shut(){ panel.hidden=true; mask.hidden=true; document.body.style.overflow=''; }
+  tab.addEventListener('click',open); x.addEventListener('click',shut); mask.addEventListener('click',shut);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') shut(); });
+})();
+</script>
+<!-- ORCH:END -->
+</body>
+</html>

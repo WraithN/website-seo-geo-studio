@@ -1,0 +1,207 @@
+{
+  "siteSpec": "Rhythm Trainer 是面向尤克里里初学者的节奏训练 App 官方落地页，核心差异化在于把抽象的节奏感训练拆解为可视化节拍网格、渐进式练习曲与即时反馈，让零基础用户在 5 分钟内完成第一次跟拍练习，并用免费试用降低下载决策门槛。",
+  "pages": [
+    {
+      "path": "/",
+      "title": "Rhythm Trainer — 尤克里里节奏训练 App，零基础也能跟上拍子",
+      "purpose": "首屏转化页：一句话讲清价值主张，展示核心功能与免费试用 CTA，承接品牌词与核心品类词流量",
+      "keySections": [
+        "Hero：价值主张 + 主 CTA（免费开始练习）+ 手机端 App 截图/动图",
+        "核心功能三栏：可视化节拍网格 / 渐进式练习曲 / 即时节奏准确度反馈",
+        "30 秒演示视频或交互式节拍试玩",
+        "初学者 3 步上手流程",
+        "社会证明：用户评价与评分（无真实数据时标注占位，不得编造）",
+        "定价摘要 + 跳转定价页",
+        "FAQ（仅页面可见内容，不输出 FAQPage 结构化数据）",
+        "页脚：导航、隐私政策、联系"
+      ],
+      "targetQuery": "尤克里里节奏训练 app",
+      "priority": "P0"
+    },
+    {
+      "path": "/features",
+      "title": "功能 — 可视化节拍网格与渐进式练习曲 | Rhythm Trainer",
+      "purpose": "承接功能类长尾词，用分模块说明说服已在比较工具的用户",
+      "keySections": [
+        "功能总览",
+        "可视化节拍网格详解（含截图）",
+        "渐进式练习曲库与难度分级",
+        "节奏准确度即时反馈机制",
+        "练习记录与进度追踪",
+        "适配设备与系统要求",
+        "CTA 回到免费试用"
+      ],
+      "targetQuery": "尤克里里 节拍练习 工具",
+      "priority": "P1"
+    },
+    {
+      "path": "/pricing",
+      "title": "定价 — Rhythm Trainer 免费版与订阅方案",
+      "purpose": "承接定价与替代品比价意图，降低付费决策摩擦",
+      "keySections": [
+        "免费版 vs 订阅版功能对比表",
+        "月付/年付价格与年付折扣说明",
+        "退款与取消政策",
+        "支付方式与发票说明",
+        "常见定价疑问（页面可见文本）",
+        "CTA 免费开始"
+      ],
+      "targetQuery": "尤克里里节奏训练 app 价格",
+      "priority": "P0"
+    },
+    {
+      "path": "/for-beginners",
+      "title": "尤克里里初学者节奏入门指南 | Rhythm Trainer",
+      "purpose": "内容型落地页，承接信息型搜索并导流至 App，建立 E-E-A-T",
+      "keySections": [
+        "什么是节奏感，为什么初学者先练节奏",
+        "4 个基础节拍型讲解（含节拍网格图示）",
+        "常见错误与纠正方法",
+        "每日 10 分钟练习计划",
+        "作者/审校者署名与简介",
+        "内链至 /features 与 /pricing"
+      ],
+      "targetQuery": "尤克里里 初学者 节奏 怎么练",
+      "priority": "P1"
+    },
+    {
+      "path": "/download",
+      "title": "下载 Rhythm Trainer — iOS 与 Android",
+      "purpose": "承接品牌词与下载意图，提供应用商店跳转与二维码",
+      "keySections": [
+        "App Store / Google Play 按钮与二维码",
+        "系统版本与存储空间要求",
+        "安装与首次练习引导",
+        "下载常见问题"
+      ],
+      "targetQuery": "Rhythm Trainer 下载",
+      "priority": "P1"
+    },
+    {
+      "path": "/about",
+      "title": "关于 Rhythm Trainer — 团队与产品理念",
+      "purpose": "建立信任与 E-E-A-T，说明团队音乐教育背景",
+      "keySections": [
+        "产品缘起",
+        "团队与音乐教育背景",
+        "联系方式",
+        "媒体与商务合作入口"
+      ],
+      "targetQuery": "Rhythm Trainer 团队",
+      "priority": "P2"
+    },
+    {
+      "path": "/privacy",
+      "title": "隐私政策 | Rhythm Trainer",
+      "purpose": "合规必需页，同时满足应用商店与广告投放审核要求",
+      "keySections": [
+        "收集的数据类型",
+        "数据用途与第三方共享",
+        "用户权利与删除请求方式",
+        "联系方式"
+      ],
+      "targetQuery": "未知",
+      "priority": "P2"
+    },
+    {
+      "path": "/terms",
+      "title": "服务条款 | Rhythm Trainer",
+      "purpose": "合规必需页，明确订阅与退款条款",
+      "keySections": [
+        "服务范围",
+        "订阅与自动续费条款",
+        "退款政策",
+        "责任限制"
+      ],
+      "targetQuery": "未知",
+      "priority": "P2"
+    }
+  ],
+  "techStack": [
+    {
+      "choice": "静态站点生成器（Astro 或 Next.js 静态导出）",
+      "why": "落地页内容以静态为主，预渲染 HTML 可保证关键文案、标题与结构化数据出现在服务端 HTML 中，避免 JS 注入导致抓取延迟；构建产物可直接部署到 CDN，利于 LCP 与 TTFB",
+      "alternative": "纯手写 HTML + 轻量构建脚本；或 Webflow/Framer 等可视化建站工具（牺牲部分性能与结构化数据控制力）"
+    },
+    {
+      "choice": "CDN + 边缘缓存托管（Cloudflare Pages / Vercel / Netlify）",
+      "why": "全球边缘分发降低 TTFB，静态资源自动压缩与 HTTP/2，满足 CWV 的 LCP 目标；支持自定义域名与自动 HTTPS",
+      "alternative": "传统虚拟主机 + Cloudflare 前置代理（配置成本更高，缓存命中率较低）"
+    },
+    {
+      "choice": "图片使用 AVIF/WebP + 显式宽高 + 响应式 srcset",
+      "why": "App 截图与演示图是 LCP 主要候选资源，现代格式与尺寸分级可显著降低资源加载时间，显式宽高避免 CLS",
+      "alternative": "PNG/JPG + 图片 CDN 自动转换（如 Cloudinary、imgix）"
+    },
+    {
+      "choice": "JSON-LD 结构化数据内联在服务端 HTML 中",
+      "why": "Google 推荐 JSON-LD；服务端输出可避免 JS 注入导致的处理延迟，确保 SoftwareApplication 与 Organization 标记稳定被抓取",
+      "alternative": "Microdata 或 RDFa（不推荐，维护成本高且 Google 明确偏好 JSON-LD）"
+    },
+    {
+      "choice": "轻量分析（Plausible 或 Cloudflare Web Analytics）",
+      "why": "脚本体积小、不阻塞主线程，降低 INP 风险；无需 Cookie 横幅即可满足基础统计需求",
+      "alternative": "Google Analytics 4（需注意脚本加载策略与隐私合规配置）"
+    },
+    {
+      "choice": "llms.txt 与 robots.txt 显式声明 AI 爬虫策略",
+      "why": "区分训练爬虫与搜索/用户触发爬虫，保留在 AI 搜索答案中的可见性，同时按业务意愿控制训练用途",
+      "alternative": "仅依赖 robots.txt 通配规则（无法区分爬虫用途）"
+    }
+  ],
+  "seoBaseline": [
+    "每个页面必须有唯一 title（建议 50–60 字符）与唯一 meta description（建议 150–160 字符），且与页面实际内容一致，不得跨页复用",
+    "每页仅一个 H1，标题层级按 H1→H2→H3 递进，不跳级",
+    "所有页面 canonical 为自引用绝对 URL，协议统一为 https，与 sitemap 中的 URL 完全一致",
+    "输出 XML Sitemap（≤5 万 URL，全部返回 200，无 noindex/重定向 URL），并在 robots.txt 中声明 Sitemap 地址",
+    "robots.txt 位于根路径且不屏蔽 CSS/JS/图片等渲染资源；显式区分训练爬虫（GPTBot、Google-Extended、CCBot）与搜索/用户触发爬虫（OAI-SearchBot、PerplexityBot）策略",
+    "结构化数据使用 JSON-LD，@context 为 https://schema.org；首页输出 SoftwareApplication（name、operatingSystem、applicationCategory、offers）与 Organization（name、url、logo、sameAs）；全站输出 BreadcrumbList；禁止使用 HowTo（2023-09 已弃用）、FAQPage（仅政府/医疗可用）、SpecialAnnouncement（2025-07 已弃用）",
+    "结构化数据通过 Google Rich Results Test 与 Schema.org Validator 校验，无必填属性缺失、无占位文本、URL 为绝对地址、日期为 ISO 8601",
+    "性能验收以字段数据为准：LCP ≤2.5s、INP ≤200ms、CLS ≤0.1（75 分位）；上线前用 Lighthouse 实验室数据做初筛，上线后用 CrUX/PSI 字段数据复核",
+    "LCP 候选资源（首屏 App 截图/演示图）预加载并压缩，首屏不加载非关键第三方脚本；所有图片设置 width/height 或 aspect-ratio",
+    "HTTPS 强制，HTTP 单跳 301 至 HTTPS，无混合内容；移动端 viewport 正确设置，移动版与桌面版内容一致（移动优先索引）",
+    "提供 /llms.txt，用简洁 Markdown 概述站点定位、核心页面链接与内容许可说明，便于 AI 搜索引用",
+    "所有内链使用真实 href 的可抓取 <a> 标签，重要页面从首页 ≤3 次点击可达；无孤儿页",
+    "图片 alt 文本 10–125 字符，描述图片实际内容；装饰性图片使用空 alt",
+    "定价页价格、订阅条款等时效性内容放在服务端 HTML 首屏，不以 JS 延迟注入",
+    "上线前完成 404 页面、重定向规则与表单提交链路检查；无死链"
+  ],
+  "nextActions": [
+    {
+      "action": "确认上游调研产物（关键词机会词、竞品分析）是否存在；若存在，用其中的机会词替换 pages 中的 targetQuery 占位值",
+      "owner": "SEO/内容负责人",
+      "effort": "0.5 人日"
+    },
+    {
+      "action": "确定技术栈最终选型（Astro vs Next.js 静态导出 vs 可视化建站），并搭建项目骨架与部署流水线",
+      "owner": "前端工程师",
+      "effort": "1–2 人日"
+    },
+    {
+      "action": "撰写首页与定价页文案初稿，明确价值主张、功能卖点与价格结构（价格数字需业务方确认，不得由建站方编造）",
+      "owner": "内容/产品",
+      "effort": "2 人日"
+    },
+    {
+      "action": "准备 App 截图、演示动图与品牌素材，按 AVIF/WebP 与尺寸分级规范导出",
+      "owner": "设计",
+      "effort": "1–2 人日"
+    },
+    {
+      "action": "实现 JSON-LD（SoftwareApplication、Organization、BreadcrumbList）并通过 Rich Results Test 校验",
+      "owner": "前端工程师",
+      "effort": "0.5 人日"
+    },
+    {
+      "action": "配置 robots.txt、sitemap.xml、llms.txt 与 canonical 规则，完成上线前技术门禁自查",
+      "owner": "前端/SEO",
+      "effort": "0.5 人日"
+    },
+    {
+      "action": "上线后用 PageSpeed Insights 与 CrUX 采集字段数据，记录 LCP/INP/CLS 基线并列入后续优化清单",
+      "owner": "SEO",
+      "effort": "0.5 人日"
+    }
+  ],
+  "__fieldCompliance": "100%"
+}

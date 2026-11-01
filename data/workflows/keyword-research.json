@@ -1,0 +1,96 @@
+{
+  "name": "关键词需求调研（免费兜底版）",
+  "nodes": [
+    {
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 400],
+      "webhookId": "179214d4-94c4-4370-a2f5-f70461113ffd",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "keyword-research",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "name": "HTTP: Google Suggest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 240],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://suggestqueries.google.com/complete/search?client=firefox&gl=' + $('Webhook Trigger').first().json.body.market + '&hl=' + $('Webhook Trigger').first().json.body.lang + '&q=' + encodeURIComponent($('Webhook Trigger').first().json.body.seed) }}",
+        "options": { "response": { "responseFormat": "json" }, "timeout": 15000, "retryOnFail": false }
+      }
+    },
+    {
+      "name": "HTTP: DDG Suggest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 240],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://duckduckgo.com/ac/?q=' + encodeURIComponent($('Webhook Trigger').first().json.body.seed) }}",
+        "options": { "response": { "responseFormat": "json" }, "timeout": 15000, "retryOnFail": false }
+      }
+    },
+    {
+      "name": "HTTP: SERP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 240],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://www.google.com/search?q=' + encodeURIComponent($('Webhook Trigger').first().json.body.seed) + '&gl=' + $('Webhook Trigger').first().json.body.market + '&hl=' + $('Webhook Trigger').first().json.body.lang + '&num=10&pws=0' }}",
+        "options": { "response": { "responseFormat": "text" }, "timeout": 15000, "retryOnFail": false }
+      }
+    },
+    {
+      "name": "Code: Analyze",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 400],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "let inp = {}; try { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst seed = (inp.seed || '').toString().trim();\nconst jobId = (inp.jobId || '').toString().trim();\nconst market = (inp.market || 'us').toString().toLowerCase();\nconst lang = (inp.lang || 'en').toString().toLowerCase();\nconst category = (inp.category || 'general').toString().trim();\n\nfunction safe(name) { try { return $('' + name).first().json; } catch (e) { return undefined; } }\n\n// --- 1) Google Suggest 解析 ---\nlet g = safe('HTTP: Google Suggest') || [];\nlet gsug = [];\nif (Array.isArray(g) && g.length > 1 && Array.isArray(g[1])) gsug = g[1];\n\n// --- 2) DDG Suggest 解析 ---\nlet dAll = []; try { dAll = $('HTTP: DDG Suggest').all(); } catch (e) {}\nlet dsug = [];\nfor (const it of dAll) {\n  const arr = Array.isArray(it.json) ? it.json : [];\n  for (const o of arr) dsug.push(o.phrase || o);\n}\n\n// --- 3) SERP HTML 解析 ---\nconst serp = safe('HTTP: SERP') || {};\nconst html = (serp.data || serp.body || serp || '').toString();\n\n// --- 聚合长尾词 ---\nlet seen = new Set(); let sug = [];\nfor (const s of [...gsug, ...dsug]) {\n  const k = (s || '').toLowerCase().trim();\n  if (k && !seen.has(k)) { seen.add(k); sug.push(s); }\n}\n\n// --- 4) 竞争难度（来自 SERP 构成）---\nlet difficulty = 60, brandInTop = 0, topDomains = [], ads = false;\nif (html && html.length > 200) {\n  const links = (html.match(/https?:\\/\\/([a-z0-9-]+\\.[a-z]{2,})(\\/|$)/gi) || [])\n    .map(u => u.replace(/^https?:\\/\\//, '').split('/')[0]);\n  const brands = ['wikipedia','youtube','amazon','google','facebook','twitter','reddit','pinterest','spotify','apple','github','linkedin','quora','medium'];\n  topDomains = links.slice(0, 10);\n  brandInTop = topDomains.filter(d => brands.some(b => d.includes(b))).length;\n  ads = /(data-text-ad|adsbygoogle|span class=\"[^\\\"]*ad|sponsored|广告|class=\"[^\\\"]*commercial)/i.test(html);\n  const inner = topDomains.filter(d => !brands.some(b => d.includes(b))).length;\n  difficulty = Math.max(10, Math.min(95, Math.round(40 + brandInTop * 8 - inner * 3)));\n}\n\n// --- 5) 综合评分（0-100，跨品类可比）---\nconst volumeProxy = Math.min(100, 20 + sug.length * 2);\nconst ease = 100 - difficulty;\nlet cpc = 1.0;\ntry { const env = (typeof $env !== 'undefined') ? $env : (n8n && n8n.env) || {}; cpc = parseFloat(env.RESEARCH_CPC || (process && process.env && process.env.RESEARCH_CPC) || '1.0') || 1.0; } catch (e) {}\nconst adBonus = ads ? 15 : 0;\nconst worth = Math.round(0.35 * volumeProxy + 0.35 * ease + 0.15 * adBonus + 0.15 * 0);\n\nlet verdict, advice;\nif (worth >= 65 && difficulty <= 60) { verdict = '✅ 值得做'; advice = '建议优先排期，作为核心词/栏目页主攻。'; }\nelse if (worth >= 45) { verdict = '🟡 可尝试（长尾切入）'; advice = '建议先做长尾子词页面，再逐步攻核心词。'; }\nelse { verdict = '🔴 暂不优先'; advice = '竞争激烈或商业意图弱，建议换词或细分角度。'; }\n\nconst report = [\n  '🔍 关键词可行性分析：' + seed,\n  '市场: ' + market + ' / 语言: ' + lang + ' / 品类: ' + category,\n  '──────────────',\n  '衍生长尾词 (' + sug.length + '): ' + (sug.slice(0, 15).join('、') || '（未取到，可能网络受限）'),\n  '──────────────',\n  '竞争难度(估计): ' + difficulty + ' / 100   ' + (difficulty <= 40 ? '易' : difficulty <= 60 ? '中' : '难'),\n  '品牌站占位(前10): ' + brandInTop + ' 个',\n  'SERP 广告: ' + (ads ? '有 → 变现路径清晰' : '无 → 偏信息词'),\n  '──────────────',\n  '综合值得做评分: ' + worth + ' / 100',\n  '结论: ' + verdict,\n  '建议: ' + advice,\n  '──────────────',\n  '（CPC 默认 ' + cpc + '；接入会员 API 后可在 env 配 RESEARCH_CPC 或改用本地 Python 引擎拿实时值。本工作流为免费兜底版。）'\n].join('\\n');\n\nreturn [{ json: {\n  report,\n  analysis: {\n    seed, suggestions: sug, suggestionCount: sug.length,\n    difficulty, brandInTop, topDomains: topDomains.slice(0, 10),\n    adsPresent: ads, volumeProxy, worthScore: worth, cpcUsed: cpc,\n    verdict, reasons: [advice], monetization: ads ? '广告/联盟' : '信息词-间接'\n  }\n} }];"
+      }
+    },
+    {
+      "name": "Code: Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 400],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\nlet inp = {}; try { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString();\nlet report = ''; try { report = ($('Code: Analyze').first().json.report) || ''; } catch (e) { report = ''; }\nlet analysis = {}; try { analysis = ($('Code: Analyze').first().json.analysis) || {}; } catch (e) {}\nconst payload = {\n  jobId: jobId, slug: '', url: '', dns: '',\n  status: report ? 'seo-done' : 'seo-partial',\n  result: report,\n  analysis: analysis,\n  log: report ? '关键词调研报告已生成' : '调研流程已触发，但报告内容暂未生成（抓取可能失败）'\n};\ntry {\n  const dir = '/home/node/sites/_bridge_cb';\n  fs.mkdirSync(dir, { recursive: true });\n  fs.writeFileSync(dir + '/' + (jobId || 'unknown') + '.json', JSON.stringify(payload, null, 2));\n} catch (e) { /* 忽略 */ }\nreturn [{ json: { ok: true, jobId: jobId } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [ [ { "node": "HTTP: Google Suggest", "type": "main", "index": 0 } ] ]
+    },
+    "HTTP: Google Suggest": {
+      "main": [ [ { "node": "HTTP: DDG Suggest", "type": "main", "index": 0 } ] ]
+    },
+    "HTTP: DDG Suggest": {
+      "main": [ [ { "node": "HTTP: SERP", "type": "main", "index": 0 } ] ]
+    },
+    "HTTP: SERP": {
+      "main": [ [ { "node": "Code: Analyze", "type": "main", "index": 0 } ] ]
+    },
+    "Code: Analyze": {
+      "main": [ [ { "node": "Code: Callback", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateId": null, "instanceId": null },
+  "versionId": "00000000-0000-0000-0000-000000000014",
+  "pinData": {},
+  "tags": ["indie-site-builder", "keyword-research"]
+}

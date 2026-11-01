@@ -1,0 +1,201 @@
+{
+  "siteSpec": "Rhythm Trainer 是面向尤克里里初学者的节奏训练 App 官网（单页落地页为主，辅以少量支撑页）。定位为“把节奏练对”的轻量练习工具：用和弦切换练习、扫弦节奏训练与节拍器三大核心功能，解决初学者“换弦卡顿、扫弦不稳、跟不上拍”的高频痛点。核心差异化在于把节奏训练拆成可量化、可跟练的短时任务（跟拍、变速、循环），并以移动端优先的下载转化路径承接流量，页面以功能演示 + 定价 + 下载引导构成完整转化闭环。",
+  "pages": [
+    {
+      "path": "/",
+      "title": "Rhythm Trainer — 尤克里里节奏训练 App｜和弦切换·扫弦·节拍器",
+      "purpose": "主落地页，承接品牌词与核心功能词流量，完成功能认知到下载/试用转化",
+      "keySections": [
+        "Hero：一句话价值主张 + 手机端 App 截图/动图 + 主 CTA（下载/免费试用）",
+        "核心功能三栏：和弦切换练习、扫弦节奏训练、节拍器（每栏含 1 张演示图 + 2 句说明 + 适用场景）",
+        "初学者痛点—解决方案对照（换弦卡顿/扫弦不稳/跟不上拍）",
+        "30 秒上手流程（3 步图示）",
+        "用户评价/使用场景（无真实评价时留占位并标注待补，不编造）",
+        "定价区：免费版 vs 付费版功能对比表 + 月付/年付切换",
+        "下载引导：App Store / Google Play 徽章 + 二维码 + 移动端吸底 CTA",
+        "FAQ（5–8 条，围绕初学者常见疑问）",
+        "页脚：隐私政策、服务条款、联系方式、版权"
+      ],
+      "targetQuery": "尤克里里节奏训练 app（上游调研产物未提供，此为目标词假设，需以关键词工具校验后替换）",
+      "priority": "P0"
+    },
+    {
+      "path": "/features",
+      "title": "功能详解 — 和弦切换、扫弦节奏与节拍器｜Rhythm Trainer",
+      "purpose": "承接功能长尾词，为首页三栏提供深度展开页，提升内容厚度与内链结构",
+      "keySections": [
+        "和弦切换练习：变速循环、错误提示、进度记录",
+        "扫弦节奏训练：常见扫弦型（下下上、下上空上下上等）跟练与节拍对齐",
+        "节拍器：BPM 调节、重音设置、与练习曲目联动",
+        "练习数据与进步曲线（说明可记录哪些指标，不虚构具体数值）",
+        "返回首页 CTA 与下载引导"
+      ],
+      "targetQuery": "尤克里里扫弦节奏练习（假设词，待校验）",
+      "priority": "P1"
+    },
+    {
+      "path": "/pricing",
+      "title": "定价 — Rhythm Trainer 免费版与高级版",
+      "purpose": "独立承接定价类查询，降低首页长度并便于广告/对比类流量直达",
+      "keySections": [
+        "免费版与高级版功能对比表",
+        "月付/年付价格与折算说明（价格未定则标注“待定”，不编造）",
+        "退款与订阅说明",
+        "常见计费问题 FAQ",
+        "下载/试用 CTA"
+      ],
+      "targetQuery": "尤克里里练习 app 价格 / 节奏训练 app 收费（假设词，待校验）",
+      "priority": "P1"
+    },
+    {
+      "path": "/download",
+      "title": "下载 Rhythm Trainer — iOS 与 Android 安装引导",
+      "purpose": "承接“下载/安装”意图，提供分平台引导与二维码，作为所有 CTA 的落地目标",
+      "keySections": [
+        "iOS / Android 分平台下载按钮与二维码",
+        "系统版本要求与安装步骤",
+        "权限说明（麦克风用于节奏识别等，按实际功能填写）",
+        "下载失败/无法安装排查",
+        "返回首页"
+      ],
+      "targetQuery": "尤克里里节奏训练 app 下载（假设词，待校验）",
+      "priority": "P1"
+    },
+    {
+      "path": "/blog",
+      "title": "尤克里里节奏练习指南 — Rhythm Trainer 博客",
+      "purpose": "内容入口页，承载初学者教程类长尾词，为首页与功能页导流（首期可只建列表页 + 2–3 篇）",
+      "keySections": [
+        "文章列表（按主题：扫弦型、节拍、换弦）",
+        "分类与标签",
+        "订阅/下载 CTA 模块"
+      ],
+      "targetQuery": "尤克里里初学者节奏怎么练（假设词，待校验）",
+      "priority": "P2"
+    },
+    {
+      "path": "/privacy",
+      "title": "隐私政策｜Rhythm Trainer",
+      "purpose": "合规必备页，满足应用商店与广告平台审核要求",
+      "keySections": [
+        "收集的数据类型",
+        "麦克风/音频数据处理说明",
+        "第三方 SDK 与统计",
+        "用户权利与联系方式"
+      ],
+      "targetQuery": "无（非搜索流量页）",
+      "priority": "P0"
+    },
+    {
+      "path": "/terms",
+      "title": "服务条款｜Rhythm Trainer",
+      "purpose": "合规必备页，说明订阅、退款与使用限制",
+      "keySections": [
+        "服务范围",
+        "订阅与自动续费条款",
+        "退款政策",
+        "责任限制"
+      ],
+      "targetQuery": "无（非搜索流量页）",
+      "priority": "P0"
+    }
+  ],
+  "techStack": [
+    {
+      "choice": "静态站点生成（Astro 或 Next.js 静态导出）",
+      "why": "落地页内容以静态为主，预渲染 HTML 可保证关键内容与 meta 在服务端 HTML 中直接可见，避免 JS 渲染阻断抓取；同时便于后续加博客",
+      "alternative": "纯手写 HTML + 轻量构建（Vite）；或 Webflow/Framer 等可视化建站工具"
+    },
+    {
+      "choice": "Tailwind CSS + 移动端优先响应式布局",
+      "why": "落地页区块复用度高，原子化样式便于快速迭代；移动端优先契合 App 下载场景（多数流量来自手机）",
+      "alternative": "CSS Modules 或原生 CSS + 设计令牌"
+    },
+    {
+      "choice": "托管于支持边缘 CDN 的平台（Cloudflare Pages / Vercel / Netlify）",
+      "why": "静态资源就近分发，降低 TTFB，利于 LCP；自带 HTTPS 与自动部署",
+      "alternative": "对象存储 + CDN（如 S3 + CloudFront）"
+    },
+    {
+      "choice": "图片使用 WebP/AVIF + 显式宽高 + 懒加载",
+      "why": "App 截图与演示图是 LCP 主要候选，压缩与尺寸声明可同时改善 LCP 与 CLS",
+      "alternative": "SVG 用于图标与简单插画；`<picture>` 提供格式回退"
+    },
+    {
+      "choice": "结构化数据用 JSON-LD 内联于 HTML head/body",
+      "why": "Google 明确推荐 JSON-LD；服务端直出可避免 JS 注入导致的处理延迟",
+      "alternative": "Microdata（不推荐，仅作兼容兜底）"
+    },
+    {
+      "choice": "轻量统计（如 Plausible / Cloudflare Web Analytics）",
+      "why": "避免重型第三方脚本占用主线程影响 INP；隐私友好，减少 Cookie 合规负担",
+      "alternative": "GA4（需注意脚本加载策略与同意管理）"
+    },
+    {
+      "choice": "订阅与支付走 App 内购（App Store / Google Play）",
+      "why": "移动 App 订阅需遵循平台内购规则，官网定价区仅作展示与引导",
+      "alternative": "Web 端 Stripe 订阅（若后续推出网页版）"
+    }
+  ],
+  "seoBaseline": [
+    "每个可索引页面必须有唯一 title（建议 50–60 字符）与唯一 meta description（建议 150–160 字符），首页 title 含品牌名与核心功能词",
+    "每页仅一个 H1，标题层级 H1→H2→H3 不跳级；首页 H1 需包含“尤克里里节奏训练”核心语义",
+    "所有页面配置 canonical（自引用绝对 URL），协议统一为 https，HTTP 单跳 301 至 HTTPS",
+    "结构化数据（JSON-LD，@context 为 https://schema.org）：首页使用 SoftwareApplication（name、operatingSystem、applicationCategory、offers、url，有真实评分再加 aggregateRating）+ Organization + WebSite；/pricing 使用 Offer/Product 相关标记；/blog 文章使用 Article/BlogPosting；全站使用 BreadcrumbList。禁止使用 HowTo（2023-09 已弃用）、FAQPage（仅政府/医疗可用）、SpecialAnnouncement（2025-07 已弃用）",
+    "结构化数据校验：通过 Google Rich Results Test 与 Schema.org Validator，无必填属性缺失、无占位文本、URL 为绝对地址、日期为 ISO 8601",
+    "robots.txt 存在于根目录，不屏蔽 CSS/JS/图片等渲染资源，并声明 Sitemap 地址",
+    "XML Sitemap 存在且仅包含 200 状态的可索引 URL，lastmod 真实，单文件 ≤5 万 URL；提交至 Google Search Console 与 Bing Webmaster Tools",
+    "全站无意外 noindex；/privacy、/terms 可索引（合规页允许索引，若不需要可显式 noindex 并保持一致）",
+    "图片：全部有描述性 alt（约 10–125 字符），声明 width/height 防 CLS，首屏以下图片 loading=lazy，首屏 LCP 图不加 lazy 并考虑 preload",
+    "Core Web Vitals 目标（p75 字段数据）：LCP ≤2.5s、INP ≤200ms、CLS ≤0.1；上线后用 PageSpeed Insights/CrUX 校验，实验室数据仅作调试参考",
+    "移动端优先：viewport meta 正确，移动端与桌面端内容一致（Google 自 2024-07 起 100% 移动端抓取），CTA 在移动端可一键触达",
+    "内链：首页链接至 /features、/pricing、/download、/blog；重要页面从首页 ≤3 次点击可达；无断链与重定向链",
+    "llms.txt：在站点根目录提供 /llms.txt，用 Markdown 列出站点定位、核心功能页、定价页、下载页与博客入口的绝对 URL 及一句话说明，便于 AI 搜索与生成式引擎准确引用",
+    "AI 爬虫策略：robots.txt 中区分训练爬虫（GPTBot、Google-Extended、CCBot）与搜索/用户触发爬虫（OAI-SearchBot、PerplexityBot），按业务意愿显式允许或拒绝，不误伤 Googlebot",
+    "下载引导可抓取：App Store / Google Play 链接使用真实 <a href> 而非纯 JS 点击，便于抓取与用户直接跳转",
+    "定价信息真实：价格未确定前标注“待定”，不得在页面或结构化数据中填写虚构价格与评分"
+  ],
+  "nextActions": [
+    {
+      "action": "用关键词工具校验并替换页面清单中的假设目标查询词（尤克里里节奏训练 app、尤克里里扫弦节奏练习、尤克里里练习 app 价格等），输出最终词表回填 pages.targetQuery",
+      "owner": "SEO",
+      "effort": "0.5 天"
+    },
+    {
+      "action": "确认产品事实：定价方案、免费/付费功能边界、支持的系统版本、麦克风等权限用途，形成一页事实清单供文案与结构化数据使用",
+      "owner": "产品",
+      "effort": "0.5 天"
+    },
+    {
+      "action": "按 pages 清单搭建页面骨架与路由，完成首页 Hero、三功能栏、定价区、下载引导与 FAQ 的初版文案",
+      "owner": "前端/设计",
+      "effort": "3–5 天"
+    },
+    {
+      "action": "实现 JSON-LD（SoftwareApplication/Organization/WebSite/BreadcrumbList/Article）并通过 Rich Results Test 校验",
+      "owner": "前端",
+      "effort": "0.5 天"
+    },
+    {
+      "action": "配置 robots.txt、XML Sitemap、/llms.txt、canonical 与 HTTPS 跳转，提交 GSC 与 Bing",
+      "owner": "前端/SEO",
+      "effort": "0.5 天"
+    },
+    {
+      "action": "图片资源优化：导出 WebP/AVIF、声明宽高、首屏 LCP 图 preload，上线前跑 Lighthouse 与 PageSpeed Insights 基线",
+      "owner": "前端",
+      "effort": "1 天"
+    },
+    {
+      "action": "上线后 2–4 周采集 CrUX/PSI 字段数据，核对 LCP/INP/CLS 是否达标并记录基线",
+      "owner": "SEO",
+      "effort": "0.5 天"
+    },
+    {
+      "action": "规划博客首批 2–3 篇初学者节奏教程（扫弦型、节拍跟练、换弦练习），按 Article 结构化数据发布",
+      "owner": "内容",
+      "effort": "2–3 天"
+    }
+  ],
+  "__fieldCompliance": "100%"
+}

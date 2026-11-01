@@ -1,0 +1,184 @@
+{
+  "_comment": "页面 → 后台编排映射。「查看」标签页渲染：impl=功能阐述、logic=实现逻辑、workflows=各节点阐述、skills=技能详情（含任务输入/输出）。来源：server/src/flow.ts + server/src/steps.ts + server/src/skills/registry.ts。",
+  "pages": {
+    "research": {
+      "step": 1,
+      "label": "需求调研",
+      "phase": "立项",
+      "impl": "判断一个关键词/需求值不值得做。用 Google 及免费工具（Trends / Keyword Planner 免费额度 / Ahrefs·Semrush 免费版）初步验证商业价值，按 KDROI（搜索量×CPC÷竞争难度）排优先级；用户上传 SimilarWeb、Semrush 等截图后，本地 OCR 提取指标并交叉验证。产出结论、评分、长尾机会、意图簇、风险与下一步。",
+      "logic": "先后置 n8n「关键词调研」工作流拿真实联想词，再由 seo-research 套件注入 LLM 按固定字段生成；指标截图经本地 OCR 提取文本后并入 prompt 参与分析。所有搜索量类数字无可靠来源时标注「未知/估算」，不编造精确值。",
+      "workflows": [
+        "keyword-research"
+      ],
+      "suites": [
+        "seo-research"
+      ],
+      "tasks": [
+        "keyword-evaluate",
+        "serp-intent",
+        "competitor"
+      ],
+      "note": "先跑 n8n 关键词调研工作流取真实联想词，再由 seo-research 套件做机会评估与意图聚类；截图走本地 OCR 不依赖外部视觉模型。"
+    },
+    "create": {
+      "step": 2,
+      "label": "创建站点",
+      "phase": "建站",
+      "impl": "先建档（产品名/域名/面向地区/定位/语言），再产出站点规格与页面矩阵：哥飞式「分门别类罗列」——一个关键词一个页面，规划 TDH（Title/Description/H1）、URL 结构、母版模板复用。建档信息是后续所有步骤的统一上下文。",
+      "logic": "seo-orchestrator 的 create-site 任务先建档（含面向地区→合规范围摘要），再调用站点规格能力出页面清单与 SEO 基线；面向地区直接决定第 4 步合规优化清单。",
+      "workflows": [
+        "n8n-workflow-create",
+        "n8n-workflow-site-tool"
+      ],
+      "suites": [
+        "seo-orchestrator",
+        "seo-technical"
+      ],
+      "tasks": [
+        "create-site"
+      ],
+      "note": "建档信息（产品名/域名/面向地区）会自动带入后续 3-9 步。"
+    },
+    "content": {
+      "step": 6,
+      "label": "内容生产",
+      "phase": "内容",
+      "impl": "一个关键词一个页面：产出可直接发布的页面内容（标题/大纲/要点/内链/FAQ）。区分「SEO 长页（拿自然流量）」与「转化落地页（拿转化）」两类，并做多语言。",
+      "logic": "seo-content-geo 的 content-brief 任务遵循哥飞「分门别类罗列」：相邻长尾词互相内链形成矩阵，SEO 页长而全、转化页短而直接，FAQ 利于 PAA 与 AI 引用。",
+      "workflows": [
+        "content-gen"
+      ],
+      "suites": [
+        "seo-content-geo"
+      ],
+      "tasks": [
+        "content-brief"
+      ],
+      "note": ""
+    },
+    "seo": {
+      "step": 3,
+      "label": "SEO·GEO 优化",
+      "phase": "优化",
+      "impl": "上线前把待发布内容做成「搜索友好 + AI 搜索引用友好」双轨形态：答案块、实体数据、llms.txt，同时覆盖 Google 自然流量与 ChatGPT/Perplexity/AI Overviews 引用。",
+      "logic": "seo-content-geo 的 geo-optimize 任务在站点未上线、无 URL 时，直接改造内容文案与元数据草稿，确保每个目标查询都有可被 AI 抽取的独立答案块。",
+      "workflows": [],
+      "suites": [
+        "seo-content-geo",
+        "seo-technical"
+      ],
+      "tasks": [
+        "geo-optimize"
+      ],
+      "note": ""
+    },
+    "techseo": {
+      "step": 5,
+      "label": "技术SEO·GEO",
+      "phase": "技术",
+      "impl": "产出技术项验收清单（抓取/索引、sitemap、结构化数据、渲染方式、页面速度、移动端、多语言 hreflang）；站点已上线可填 URL 做真实抓取诊断。",
+      "logic": "seo-technical 的 audit 任务从真实 HTML 提取确定性事实（title/meta/canonical/h1/JSON-LD）并据此修复；geo-audit 则诊断 AI 爬虫可访问性与 llms.txt。",
+      "workflows": [
+        "techseo"
+      ],
+      "suites": [
+        "seo-technical"
+      ],
+      "tasks": [
+        "audit",
+        "geo-audit"
+      ],
+      "note": ""
+    },
+    "deploy": {
+      "step": 7,
+      "label": "部署上线",
+      "phase": "上线",
+      "impl": "产出上线前检查、部署步骤（Cloudflare Pages 等）、上线后收录与验证动作，确保发布即可被收录。",
+      "logic": "seo-technical 的 deploy-plan 任务给出可勾选清单、实际命令（含 wrangler 示例）、GSC/Bing 站长提交与监控配置。",
+      "workflows": [
+        "n8n-workflow-deploy"
+      ],
+      "suites": [
+        "seo-technical"
+      ],
+      "tasks": [
+        "deploy-plan"
+      ],
+      "note": ""
+    },
+    "backlink": {
+      "step": 8,
+      "label": "外链推广",
+      "phase": "产品运营",
+      "impl": "产品上线后按哥飞外链质量排序（流量 > 品牌 > 活跃）找出可争取的外链/引用机会与接近方式。外链是中长期资产，需要维护。",
+      "logic": "seo-research 的 link-prospecting 任务构造 resources/best tools/alternatives/statistics 等查询，对机会按真实流量、品牌权重、站点活跃度综合打分。",
+      "workflows": [
+        "backlink"
+      ],
+      "suites": [
+        "seo-research"
+      ],
+      "tasks": [
+        "link-prospecting"
+      ],
+      "note": ""
+    },
+    "monitor": {
+      "step": 9,
+      "label": "线上监控",
+      "phase": "产品运营",
+      "impl": "持续监控 UV/PV、人均访问页、跳出率、平均停留、GSC 覆盖与 AdSense 覆盖率，判断这个站「值得养」还是「该撤」，结果回流下一轮迭代（养网站防老）。",
+      "logic": "seo-monitor 的 gsc-monitor 任务给出 GSC 检查清单、临近排名机会（位置 5-20）、自相残杀检测与告警；并结合健康度信号输出养站决策。",
+      "workflows": [
+        "monitor"
+      ],
+      "suites": [
+        "seo-monitor"
+      ],
+      "tasks": [
+        "gsc-monitor"
+      ],
+      "note": ""
+    },
+    "chat": {
+      "step": 0,
+      "label": "对话式建站",
+      "phase": "工作台",
+      "impl": "用自然语言描述需求，由 Agent 对话式生成站点/部署。",
+      "logic": "n8n Chat Trigger + Agent 驱动，Agent 内部再调用建站工具工作流（生成站点 / 部署）。",
+      "workflows": [
+        "n8n-workflow-chat-create"
+      ],
+      "suites": [],
+      "tasks": [],
+      "note": "对话式建站由 n8n Chat Trigger + Agent 驱动，Agent 内部再调用建站工具工作流（生成站点 / 部署）。"
+    },
+    "settings": {
+      "step": 0,
+      "label": "API 设置",
+      "phase": "系统",
+      "impl": "配置 Coding Agent、模型与 n8n 地址。",
+      "logic": "系统设置页，本身不调用流程与技能。",
+      "workflows": [],
+      "suites": [],
+      "tasks": [],
+      "note": "系统设置页：配置 Coding Agent、模型与 n8n 地址，本身不调用流程与技能。"
+    },
+    "compliance": {
+      "step": 4,
+      "label": "合规优化",
+      "phase": "合规",
+      "impl": "按产品面向地区输出上线前合规清单：隐私政策、Cookie 同意、数据处理、未成年人保护、无障碍、邮件营销规则等。海外产品上线前必须过这一关。",
+      "logic": "seo-technical 的 compliance-check 任务严格按面向地区映射法规（GDPR/ePrivacy、CCPA/CPRA、COPPA、APPI、PIPA、LGPD），mustHave 与 checklist 作为上线门禁。",
+      "workflows": [],
+      "suites": [
+        "seo-technical"
+      ],
+      "tasks": [
+        "compliance-check"
+      ],
+      "note": "合规结论回写产品档案的 complianceScope。"
+    }
+  }
+}

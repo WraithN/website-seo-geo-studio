@@ -1,0 +1,133 @@
+{
+  "facts": {},
+  "findings": [
+    {
+      "severity": "严重",
+      "area": "输入数据",
+      "issue": "本次审计未提供任何真实 HTML 采集事实（facts 为空对象），也未提供站点域名或 URL，因此无法对 title/meta/canonical/h1/结构化数据/HTTPS 等做任何确定性判断。",
+      "evidence": "输入 facts = {}，且【站点】字段为空。",
+      "fix": "提供站点域名（或具体 URL 列表），并重新抓取首页 + 3–5 个代表性页面（首页、栏目页、详情页、产品/服务页、联系页）的原始 HTML；至少回填以下字段：url、statusCode、finalUrl、isHttps、title、metaDescription、canonical、robotsMeta、h1Count、h1Texts、imgCount、imgMissingAlt、jsonLdBlocks、hreflang、viewport、lang、wordCount、internalLinksCount。",
+      "effort": "0.5 人日（采集脚本 + 回填）"
+    },
+    {
+      "severity": "严重",
+      "area": "抓取与索引",
+      "issue": "无法验证 robots.txt 是否存在、是否误屏蔽重要目录或静态资源，也无法验证 XML Sitemap 是否存在、是否在 robots.txt 中声明、URL 是否均为 200。",
+      "evidence": "facts 中无 robotsTxt、sitemap 相关字段。",
+      "fix": "抓取 https://<domain>/robots.txt 与 /sitemap.xml（含 sitemap index），检查：① 是否含 Disallow: / 或误屏蔽 /css/、/js/、/images/；② 是否含 Sitemap: 绝对地址；③ sitemap 内 URL 抽样 50 条验证 HTTP 200、非 noindex、非重定向；④ 单文件 URL 数 ≤50000。",
+      "effort": "0.5 人日"
+    },
+    {
+      "severity": "严重",
+      "area": "索引控制",
+      "issue": "无法确认是否存在误用 noindex / X-Robots-Tag 导致重要页面不被索引。",
+      "evidence": "facts 中无 robotsMeta、xRobotsTag 字段。",
+      "fix": "对抽样页面检查 <meta name=\"robots\"> 与响应头 X-Robots-Tag；确认仅对搜索结果页、参数页、后台页使用 noindex，核心落地页一律 index,follow。",
+      "effort": "0.5 人日"
+    },
+    {
+      "severity": "中",
+      "area": "页面元素",
+      "issue": "无法评估 title 缺失/重复/过长、meta description 缺失、canonical 缺失或指向错误、h1 数量异常（0 个或多个）。",
+      "evidence": "facts 中无 title、metaDescription、canonical、h1Count 字段。",
+      "fix": "采集后按规则校验：title 50–60 字符且全站唯一；meta description 150–160 字符且唯一；canonical 为绝对 URL、自引用、与最终 URL 一致（含协议与尾斜杠）；每页恰好 1 个 h1 且与页面意图一致。",
+      "effort": "1 人日"
+    },
+    {
+      "severity": "中",
+      "area": "结构化数据",
+      "issue": "无法判断是否部署 JSON-LD、类型是否有效、是否存在已弃用类型（HowTo / SpecialAnnouncement / 商业站 FAQPage）。",
+      "evidence": "facts 中无 jsonLdBlocks 字段。",
+      "fix": "抽取页面全部 <script type=\"application/ld+json\"> 块，用 Rich Results Test 与 Schema.org Validator 校验；确认 @context 为 https://schema.org、无占位符文本、URL 为绝对地址、日期为 ISO 8601。",
+      "effort": "1 人日"
+    },
+    {
+      "severity": "中",
+      "area": "图片",
+      "issue": "无法评估图片 alt 缺失率、是否设置宽高（CLS 风险）、是否使用 WebP/AVIF、是否对首屏外图片启用 loading=lazy。",
+      "evidence": "facts 中无 imgCount、imgMissingAlt、imgWithDimensions 字段。",
+      "fix": "统计 img 总数与缺 alt 数量；检查是否设置 width/height 或 aspect-ratio；检查 <picture> 回退与 loading 属性。",
+      "effort": "0.5 人日"
+    },
+    {
+      "severity": "中",
+      "area": "移动端",
+      "issue": "无法确认 viewport meta、响应式布局与移动端内容完整性（移动优先索引已于 2024-07 全量生效）。",
+      "evidence": "facts 中无 viewport、lang 字段。",
+      "fix": "检查 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">；对比移动端与桌面端 HTML 的正文、结构化数据、meta 是否一致。",
+      "effort": "0.5 人日"
+    },
+    {
+      "severity": "中",
+      "area": "性能",
+      "issue": "无真实 CWV 字段数据，LCP/INP/CLS 均需实测，不能给出数值结论。",
+      "evidence": "facts 中无 CrUX/PSI 数据。",
+      "fix": "调用 CrUX API 或 PageSpeed Insights API 获取 p75 字段数据；阈值：LCP ≤2.5s、INP ≤200ms、CLS ≤0.1。若 CrUX 无数据（流量不足），退化到 origin 级或标注“估算”。",
+      "effort": "0.5 人日"
+    },
+    {
+      "severity": "低",
+      "area": "国际化",
+      "issue": "无法验证 hreflang 是否自引用、双向返回、含 x-default、与 canonical 对齐。",
+      "evidence": "facts 中无 hreflang 字段。",
+      "fix": "若为多语言站，抽取全部 hreflang 标签，校验 ISO 639-1 + ISO 3166-1 代码、自引用、双向互指、x-default 存在、协议与 canonical 一致。",
+      "effort": "0.5 人日"
+    }
+  ],
+  "scorecard": {
+    "indexing": 0,
+    "performance": 0,
+    "structuredData": 0,
+    "mobile": 0,
+    "content": 0
+  },
+  "quickWins": [
+    "提供站点域名后，先抓取 robots.txt 与 sitemap.xml，5 分钟内可确认是否存在致命屏蔽或 sitemap 缺失",
+    "抓取首页 HTML，检查 title / meta description / canonical / h1 四项，通常可立即发现 1–3 个可直接修复的问题",
+    "用 Rich Results Test 跑首页，确认 JSON-LD 是否有效、是否误用已弃用的 HowTo / SpecialAnnouncement",
+    "用 PageSpeed Insights 跑首页，获取移动端 CWV 字段数据（若 CrUX 有数据）"
+  ],
+  "structuredDataPlan": [
+    {
+      "type": "Organization",
+      "reason": "站点级基础实体，提供 name/url/logo/sameAs，是 AI 搜索与知识面板的基础信号；几乎所有站点都应部署。"
+    },
+    {
+      "type": "WebSite",
+      "reason": "声明站点名称与 potentialAction（SearchAction），有助于站内搜索框 sitelinks 展示。"
+    },
+    {
+      "type": "BreadcrumbList",
+      "reason": "反映层级导航，可在 SERP 展示面包屑路径，提升点击率；需与页面实际导航一致。"
+    },
+    {
+      "type": "WebPage",
+      "reason": "页面级基础类型，提供 name/description/dateModified，便于搜索引擎理解页面时效。"
+    },
+    {
+      "type": "Article / BlogPosting",
+      "reason": "若站点含博客或资讯内容，需部署 headline/author/datePublished/dateModified/image/publisher，是内容页富结果的前提。"
+    },
+    {
+      "type": "Product + Offer",
+      "reason": "若为电商站，Product/Offer 是商品富结果（价格、库存、评分）的必要条件；时效字段应放在首屏服务端 HTML。"
+    },
+    {
+      "type": "LocalBusiness",
+      "reason": "若有线下门店，部署 name/address/telephone/geo/openingHours，配合 NAP 一致性提升本地搜索表现。"
+    },
+    {
+      "type": "ProfilePage + Person",
+      "reason": "若站点有作者页，用于强化 E-E-A-T 信号，mainEntity 指向 Person 并附 sameAs。"
+    }
+  ],
+  "_note": "本次输入 facts 为空且未提供站点，所有评分置 0 表示“无法评估”而非“实际得分为 0”；补齐采集数据后可重新审计并给出真实评分。",
+  "__fieldCompliance": "100%",
+  "__evidence": {
+    "hasRealData": false,
+    "sources": [],
+    "realTerms": [],
+    "pageFacts": null,
+    "upstream": null
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO/GEO 流量增长总控"
+  short_description: "诊断网站流量问题并编排关键词、内容、技术与GEO优化工作流"
+  default_prompt: "Use $seo-growth-orchestrator to diagnose my traffic problem and choose the right SEO/GEO workflow."

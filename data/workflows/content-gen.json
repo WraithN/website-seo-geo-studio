@@ -1,0 +1,66 @@
+{
+  "name": "程序化内容生产（R13 每词一页）",
+  "nodes": [
+    {
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 400],
+      "webhookId": "fcc1edcd-551c-45aa-a10f-2c5b1f07534c",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "content-gen",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "name": "HTTP: Suggest Expand",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 400],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://suggestqueries.google.com/complete/search?client=firefox&gl=' + ($('Webhook Trigger').first().json.body.market || 'us') + '&hl=' + ($('Webhook Trigger').first().json.body.lang || 'en') + '&q=' + encodeURIComponent($('Webhook Trigger').first().json.body.seed || $('Webhook Trigger').first().json.body.keywords || '') }}",
+        "options": { "response": { "responseFormat": "json" }, "timeout": 15000, "retryOnFail": false }
+      }
+    },
+    {
+      "name": "Code: Generate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 400],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\n\n// ---- 读取入参 ----\nlet inp = {};\ntry { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString().trim();\nconst seed = (inp.seed || '').toString().trim();\nlet lang = (inp.lang || 'en').toString().toLowerCase();\nlet market = (inp.market || 'us').toString().toLowerCase();\nlet siteContext = inp.siteContext || inp.site_context || {};\n\n// ---- 归一化关键词 ----\nlet kws = [];\nif (Array.isArray(inp.keywords)) kws = inp.keywords.map(k => (k||'').toString().trim()).filter(Boolean);\nelse if (typeof inp.keywords === 'string') kws = inp.keywords.split(',').map(k => k.trim()).filter(Boolean);\nif (seed && !kws.includes(seed)) kws = [seed, ...kws];\n// 合并 Google Suggest 扩展（可选，离线时为空）\ntry {\n  const g = $('HTTP: Suggest Expand').first().json || [];\n  if (Array.isArray(g) && g.length > 1 && Array.isArray(g[1])) {\n    for (const s of g[1]) if (s && !kws.includes(s)) kws.push(s);\n  }\n} catch (e) {}\nif (kws.length === 0) { return [{ json: { ok:false, error:'至少需要一个关键词' } }]; }\n\n// ---- 工具函数 ----\nfunction slugify(t){ return (t||'').toLowerCase().trim().replace(/['\\\"]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80) || 'page'; }\nfunction esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }\n\n// ---- 章节骨架（程序化套用）----\nconst SEC = [\n  ['什么是 {kw}', '定义与核心概念，帮助读者快速建立对 {kw} 的整体认知。'],\n  ['{kw} 的核心要点', '拆解 {kw} 的关键维度，给出可落地、可验证的要点清单。'],\n  ['如何开始 {kw}', '面向新手的分步指引，从准备到第一次上手的最小可行路径。'],\n  ['{kw} 的常见误区', '总结实践 {kw} 时最容易踩的坑，并给出避坑建议。'],\n  ['提升 {kw} 效果的实用技巧', '在基础之上进一步优化的进阶技巧，适合已经入门的读者。'],\n  ['{kw} 工具与资源推荐', '围绕 {kw} 的常用工具、学习资源与延伸阅读。'],\n  ['{kw} 常见问题（FAQ）', '用问答形式覆盖关于 {kw} 的高频搜索意图，提升长尾覆盖。']\n];\nconst LANG_STUB = {\n  'zh-CN': ['{kw} 完全指南','{kw}：从入门到精通'],\n  'ja': ['{kw} 完全ガイド','{kw}：入門から習得まで'],\n  'de': ['Der {kw} Leitfaden','{kw}: Vom Einstieg zur Meisterschaft'],\n  'fr': ['Le guide {kw}','{kw} : du début à la maîtrise'],\n  'es': ['La guía de {kw}','{kw}: de principiante a experto'],\n  'pt': ['O guia de {kw}','{kw}: do iniciante ao mestre']\n};\n\nfunction genPage(kw){\n  kw = kw.trim();\n  const kwT = kw.charAt(0).toUpperCase() + kw.slice(1);\n  const slug = slugify(kw);\n  let title = kwT + ': The Complete ' + market.toUpperCase() + ' Guide';\n  if (title.length > 60) title = title.slice(0,57).trim() + '…';\n  let meta = 'Learn everything about ' + kw + ' — definitions, how-to steps, common mistakes, tips, tools and FAQ. A practical ' + market.toUpperCase() + ' guide for beginners and beyond.';\n  if (meta.length > 155) meta = meta.slice(0,152).trim() + '…';\n  const sections = SEC.map(([h,lead]) => ({ h2: h.replace('{kw}', kwT), paragraph: lead.replace('{kw}', kwT) + ' 本节围绕「' + kw + '」展开，覆盖读者最常搜索的意图，并给出可操作的建议。' }));\n  // 内链建议：站点已有页关键词共现匹配\n  const existing = (siteContext.existing_pages || []) || [];\n  let links = [];\n  for (const pg of existing){\n    const pgk = (pg.keywords || []);\n    const pgTitle = pg.title || '';\n    const hit = pgk.some(t => t && kw.toLowerCase().includes(t.toLowerCase())) || (pgTitle && kw.toLowerCase().includes(pgTitle.toLowerCase()));\n    if (pgTitle && hit) links.push({ anchor: pgTitle, url: pg.url || ('/' + slugify(pgTitle)), reason: '与「' + kw + '」关键词共现，适合在相关章节插入内链' });\n  }\n  if (links.length === 0) links.push({ anchor: '返回首页', url: '/', reason: '未提供站点已有页面，默认建议回链首页（接入站点档案后自动匹配）' });\n  const langStubs = {};\n  for (const lg of Object.keys(LANG_STUB)) langStubs[lg] = { title: LANG_STUB[lg][0].replace('{kw}', kwT), h1: LANG_STUB[lg][1].replace('{kw}', kwT) };\n  const wc = sections.reduce((a,s)=>a+s.paragraph.split(/\\s+/).length,0) + 120;\n  return { keyword: kw, slug, title, meta, h1: kwT + ': The Complete Guide', sections, internal_links: links, lang_stubs: langStubs, word_count_est: wc };\n}\n\n// ---- 生成所有页 + 落盘 ----\nconst outBase = '/home/node/sites/_content/' + slugify(seed || kws[0]);\ntry { fs.mkdirSync(outBase, { recursive: true }); } catch (e) {}\nconst pages = [];\nfor (const kw of kws){ const p = genPage(kw); pages.push(p);\n  let secHtml = '';\n  for (const s of p.sections) secHtml += '    <section>\\n      <h2>' + esc(s.h2) + '</h2>\\n      <p>' + esc(s.paragraph) + '</p>\\n    </section>\\n';\n  const linksHtml = p.internal_links.map(l => '      <li><a href=\"' + esc(l.url) + '\">' + esc(l.anchor) + '</a> — ' + esc(l.reason) + '</li>').join('\\n');\n  const html = '<!doctype html>\\n<html lang=\"en\">\\n<head>\\n  <meta charset=\"utf-8\">\\n  <title>' + esc(p.title) + '</title>\\n  <meta name=\"description\" content=\"' + esc(p.meta) + '\">\\n</head>\\n<body>\\n  <article>\\n    <h1>' + esc(p.h1) + '</h1>\\n' + secHtml + '    <section>\\n      <h2>相关内链</h2>\\n      <ul>\\n' + linksHtml + '\\n      </ul>\\n    </section>\\n  </article>\\n</body>\\n</html>';\n  try { fs.writeFileSync(outBase + '/' + p.slug + '.html', html); } catch (e) {}\n}\nconst manifest = { generated_at: new Date().toISOString(), market, lang, site: siteContext.site_name, pages: pages.map(p=>({ slug:p.slug, title:p.title, keyword:p.keyword, file: p.slug+'.html', word_count_est:p.word_count_est, internal_links:p.internal_links, lang_stubs:p.lang_stubs })) };\ntry { fs.writeFileSync(outBase + '/manifest.json', JSON.stringify(manifest, null, 2)); } catch (e) {}\n\n// ---- 报告文本 ----\nlet report = '程序化内容生产报告\\n' + '='.repeat(48) + '\\n';\nreport += '市场：' + market + ' ｜ 语言：' + lang + ' ｜ 共生成 ' + pages.length + ' 个内容页\\n\\n';\nreport += '【内容页清单】\\n';\nfor (const p of pages) report += ' · ' + p.keyword + '\\n      标题 : ' + p.title + '\\n      文件 : ' + p.slug + '.html（约 ' + p.word_count_est + ' 词）\\n      内链 : ' + p.internal_links.length + ' 条 ｜ 多语言 stub : ' + Object.keys(p.lang_stubs).length + ' 种\\n';\nreport += '\\n说明：n8n 模板引擎生成（离线可用）。manifest.json 可直接回写站点做批量部署。\\n';\n\nreturn [{ json: { ok: true, jobId, report, pages: manifest.pages, files: pages.map(p=>p.slug+'.html').concat(['manifest.json']) } }];"
+      }
+    },
+    {
+      "name": "Code: Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\nlet inp = {}; try { inp = $('Webhook Trigger').first().json.body || {}; } catch (e) { inp = {}; }\nconst jobId = (inp.jobId || '').toString();\nlet report = ''; try { report = ($('Code: Generate').first().json.report) || ''; } catch (e) { report = ''; }\nlet pages = []; try { pages = ($('Code: Generate').first().json.pages) || []; } catch (e) {}\nlet files = []; try { files = ($('Code: Generate').first().json.files) || []; } catch (e) {}\nconst payload = {\n  jobId: jobId, slug: '', url: '', dns: '',\n  status: report ? 'content-done' : 'content-partial',\n  result: report,\n  pages: pages,\n  files: files,\n  log: report ? '程序化内容生产报告已生成' : '内容生产流程已触发，但报告内容暂未生成'\n};\ntry {\n  const dir = '/home/node/sites/_bridge_cb';\n  fs.mkdirSync(dir, { recursive: true });\n  fs.writeFileSync(dir + '/' + (jobId || 'unknown') + '.json', JSON.stringify(payload, null, 2));\n} catch (e) { /* 忽略 */ }\nreturn [{ json: { ok: true, jobId: jobId } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [ [ { "node": "HTTP: Suggest Expand", "type": "main", "index": 0 } ] ]
+    },
+    "HTTP: Suggest Expand": {
+      "main": [ [ { "node": "Code: Generate", "type": "main", "index": 0 } ] ]
+    },
+    "Code: Generate": {
+      "main": [ [ { "node": "Code: Callback", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateId": null, "instanceId": null },
+  "versionId": "00000000-0000-0000-0000-000000000015",
+  "pinData": {},
+  "tags": ["indie-site-builder", "content-gen"]
+}

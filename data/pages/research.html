@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>建站助手 · 需求调研</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Noto+Serif+SC:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{ /* theme:canonical */
+    --paper:#f6f3ec; --surface:#fffdf9; --surface-2:#f1ece2;
+    --ink:#17131b; --muted:#5f5867;
+    --line:rgba(23,19,27,.10); --line-2:rgba(23,19,27,.06);
+    --accent:#5b34e6; --accent-ink:#4a25c9; --accent-soft:rgba(91,52,230,.10);
+    --ok:#0f9d6b; --ok-soft:rgba(15,157,107,.12);
+    --warn:#b45309; --warn-soft:rgba(180,83,9,.12);
+    --err:#dc2626; --err-soft:rgba(220,38,38,.10);
+    --gold:#c98a16; --gold-soft:rgba(201,138,22,.14);
+    --radius:16px; --radius-lg:22px;
+    --shadow-1:0 2px 8px rgba(23,19,27,.06); --shadow-2:0 12px 32px rgba(23,19,27,.09);
+    --ease:cubic-bezier(0.16,1,0.3,1); --dur-fast:170ms; --dur:320ms;
+    --font-body:"Plus Jakarta Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    --font-disp:"Fraunces","Noto Serif SC","Songti SC",Georgia,serif;
+    /* chat / settings 页的旧变量名，统一指向同一主题 */
+    --bg:#f6f3ec; --fg:#17131b; --primary:#5b34e6; --primary2:#7c5cf0;
+    --user:#5b34e6; --orb1:#c9b8ff; --orb2:#e3d9ff; --glass:0; --dark:0;
+    --font:"Plus Jakarta Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    --serif:"Fraunces","Noto Serif SC","Songti SC",Georgia,serif;
+    --shadow:0 12px 40px rgba(23,19,27,.10);
+  }
+  
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:var(--font-body);color:var(--ink);background:var(--paper);overflow-x:hidden;padding-bottom:48px;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z-index:40;background:linear-gradient(90deg,var(--accent),#8b6ef0 60%,var(--accent));opacity:.9}
+  .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line);background:rgba(246,243,236,.78);backdrop-filter:blur(10px)}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px}
+  .brand .dot{width:13px;height:13px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+  .brand .name{font-family:var(--font-disp);font-weight:600;font-size:22px;letter-spacing:-.01em}
+  .brand small{font-weight:500;color:var(--muted);font-size:12px;margin-left:6px}
+  .spacer{flex:1}
+  .navlink{color:var(--muted);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:7px 13px;border-radius:999px;transition:var(--dur-fast);background:var(--surface)}
+  .navlink:hover{color:var(--accent-ink);border-color:var(--accent)}
+  .navlink.active{color:#fff;background:var(--accent);border-color:var(--accent);box-shadow:0 6px 16px rgba(91,52,230,.32)}
+  .wrap{position:relative;z-index:1;max-width:1120px;margin:26px auto 0;padding:0 20px}
+  .hero{position:relative;border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px 32px 28px;background:var(--surface);box-shadow:var(--shadow-2);overflow:hidden}
+  .hero::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+  .hero-kicker{font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-ink)}
+  .hero h1{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,4vw,42px);line-height:1.06;letter-spacing:-.02em;margin:12px 0 0}
+  .hero h1 .hl{color:var(--accent);position:relative;white-space:nowrap}
+  .hero h1 .hl::after{content:"";position:absolute;left:0;right:0;bottom:.08em;height:.14em;background:var(--accent-soft);z-index:-1;border-radius:2px}
+  .hero-sub{margin:14px 0 0;font-size:14.5px;color:var(--muted);line-height:1.65;max-width:680px}
+  .layout{display:grid;grid-template-columns:1.12fr .88fr;gap:20px;margin-top:22px;align-items:start}
+  .col-status{position:sticky;top:84px;display:flex;flex-direction:column;gap:16px}
+  .panel{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow-1)}
+  .panel-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+  .num{flex:none;font-family:var(--font-disp);font-weight:700;font-size:19px;line-height:1;color:#fff;background:var(--accent);width:34px;height:34px;border-radius:10px;display:grid;place-items:center;box-shadow:0 6px 14px rgba(91,52,230,.3)}
+  .panel-head h2{margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .panel-head .desc{margin:3px 0 0;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field.full{grid-column:1 / -1}
+  label{font-size:13px;font-weight:600}
+  label .req{color:var(--accent)}
+  input,select,textarea{font-family:var(--font-body);font-size:14px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;outline:none;transition:var(--dur-fast)}
+  input::placeholder,textarea::placeholder{color:#9a93a0}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+  textarea{resize:vertical;min-height:96px;line-height:1.55}
+  .hint{font-size:12px;color:var(--muted)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .check{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink);cursor:pointer;user-select:none}
+  .check input{width:17px;height:17px;accent-color:var(--accent)}
+  .btn{font-family:var(--font-body);font-weight:700;font-size:14.5px;border:none;cursor:pointer;border-radius:12px;padding:13px 22px;transition:var(--dur-fast);background:var(--accent);color:#fff;box-shadow:0 8px 22px rgba(91,52,230,.32);display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(91,52,230,.4)}
+  .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+  .btn .arr{transition:transform .18s}
+  .btn:hover .arr{transform:translateX(3px)}
+  .status-pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+  .status-pill.building{background:var(--accent-soft);color:var(--accent-ink);border-color:rgba(91,52,230,.22)}
+  .status-pill.done{background:var(--ok-soft);color:#4a25c9;border-color:rgba(74, 37, 201, .25)}
+  .status-pill.error{background:var(--err-soft);color:#5b34e6;border-color:rgba(91, 52, 230, .22)}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .report{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:#15121c;color:#fffdf9;font-family:"SFMono-Regular",Consolas,monospace;font-size:12.5px;line-height:1.7;white-space:pre-wrap;max-height:480px;overflow:auto}
+  .report .sec{color:#8b6ef0;font-weight:700}
+  .report .ok{color:#8b6ef0}
+  .report .warn{color:#8b6ef0}
+  .report .err{color:#f1ece2}
+  .report .muted{color:#9a93a0}
+  .report .verdict{color:#fff;font-weight:700}
+  .report img{display:block;max-width:100%;margin-top:10px;border-radius:8px;border:1px solid rgba(255,255,255,.12)}
+  .note{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.6}
+  /* 进度步骤 */
+  .pbar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:12px}
+  .pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#8b6ef0);transition:width .45s var(--ease)}
+  .steps{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+  .step{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);opacity:.45;transition:.25s}
+  .step.on{opacity:1;color:var(--ink);font-weight:600}
+  .step .dot{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+  .step.on .dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .step.ok .dot{background:var(--ok);box-shadow:none}
+  .step .pct{margin-left:auto;font-weight:700;font-size:11px;color:var(--accent-ink)}
+  /* 截图上传 */
+  .upload{border:1.5px dashed var(--line);border-radius:12px;padding:13px;text-align:center;cursor:pointer;color:var(--muted);font-size:12.5px;transition:.15s;background:var(--surface-2)}
+  .upload:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .thumb{position:relative;width:76px;height:58px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb button{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:11px;cursor:pointer;line-height:1}
+  /* 结果卡片 */
+  .pcard{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:12px;background:var(--surface)}
+  .pcard h3{margin:0 0 10px;font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .pcard h3 .tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent-ink)}
+  table.lt{width:100%;border-collapse:collapse;font-size:12px}
+  table.lt th{text-align:left;color:var(--muted);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--line);font-size:11px}
+  table.lt td{padding:7px 8px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  table.lt .kw{font-weight:700;color:var(--ink)}
+  .score-pill{display:inline-block;min-width:26px;text-align:center;padding:2px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:11px}
+  .ev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+  .ev{background:var(--surface-2);border-radius:10px;padding:8px 10px}
+  .ev .k{font-size:10.5px;color:var(--muted);font-weight:700}
+  .ev .v{font-size:15px;font-weight:800;color:var(--ink);margin-top:2px}
+  .ev img{width:100%;border-radius:6px;margin-top:6px;border:1px solid var(--line)}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}.col-status{position:relative;top:0}.brand small{display:none}.grid2{grid-template-columns:1fr}}
+</style>
+<style id="sidebar-style">
+  /* ===== 流程侧边栏（统一样式，var 兼容两种主题变量） ===== */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;z-index:60;display:flex;flex-direction:column;
+    background:var(--surface,#ffffff);border-right:1px solid var(--line,rgba(23, 19, 27, .10));overflow-y:auto;overscroll-behavior:contain}
+  .sb-brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;flex:0 0 auto}
+  .sb-brand .sb-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--primary,var(--accent,#8b6ef0)),#8b6ef0);box-shadow:0 0 12px var(--primary,var(--accent,#8b6ef0))}
+  .sb-brand .sb-name{font-weight:800;font-size:18px;letter-spacing:.2px;color:var(--fg,var(--ink,#17131b))}
+  .sb-brand small{display:block;font-size:10px;color:var(--muted,#5b34e6);font-weight:500;letter-spacing:.4px}
+  .sb-nav{display:flex;flex-direction:column;gap:2px;padding:4px 12px 22px}
+  .sb-group{font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:var(--muted,#5b34e6);
+    text-transform:uppercase;padding:14px 10px 6px;opacity:.85}
+  .sb-link{display:flex;align-items:center;gap:9px;color:var(--muted,#5b34e6);text-decoration:none;
+    font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:10px;transition:.18s;border:1px solid transparent;line-height:1.2}
+  .sb-link:hover{color:var(--fg,var(--ink,#17131b));background:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 8%,transparent)}
+  .sb-link.active{color:var(--primary,var(--accent,#8b6ef0));border-color:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 30%,transparent);
+    background:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 12%,transparent)}
+  .sb-num{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:6px;font-size:11px;font-weight:800;
+    background:color-mix(in srgb,var(--primary,var(--accent,#8b6ef0)) 14%,transparent);color:var(--primary,var(--accent,#8b6ef0));flex:0 0 auto}
+  .sb-link.active .sb-num{background:var(--primary,var(--accent,#8b6ef0));color:#fff}
+  @media(min-width:861px){body{padding-left:230px !important}}
+  @media(max-width:860px){
+    .sidebar{position:sticky;top:0;left:auto;bottom:auto;width:100%;height:auto;flex-direction:row;align-items:center;gap:8px;
+      border-right:none;border-bottom:1px solid var(--line,rgba(23, 19, 27, .10));overflow-x:auto;overflow-y:hidden;padding:8px 12px}
+    .sb-brand{padding:0 8px 0 4px;flex:0 0 auto}.sb-brand small{display:none}
+    .sb-nav{flex-direction:row;gap:6px;padding:0;align-items:center}
+    .sb-group{display:none}
+    .sb-link{white-space:nowrap;padding:7px 11px;font-size:12.5px}
+    body{padding-left:0 !important}
+  }
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sb-brand"><span class="sb-dot"></span><div><span class="sb-name">建站助手</span><small>INDIE SITE BUILDER</small></div></div>
+    <nav class="sb-nav">
+      <div class="sb-group">工作台</div>
+      <a class="sb-link" href="/chat">对话</a>
+            <div class="sb-group">增长流程（按流程链条排序）</div>
+      <a class="sb-link active" href="/research" aria-current="page"><span class="sb-num">1</span>需求调研</a>
+      <a class="sb-link" href="/product"><span class="sb-num">2</span>新建独立站产品</a>
+      <a class="sb-link" href="/create"><span class="sb-num">3</span>创建站点</a>
+      <a class="sb-link" href="/content"><span class="sb-num">4</span>内容生产</a>
+      <a class="sb-link" href="/seo"><span class="sb-num">5</span>SEO 优化</a>
+      <a class="sb-link" href="/compliance"><span class="sb-num">6</span>合规优化</a>
+      <a class="sb-link" href="/techseo"><span class="sb-num">7</span>技术SEO</a>
+      <a class="sb-link" href="/deploy"><span class="sb-num">8</span>部署上线</a>
+      <a class="sb-link" href="/backlink"><span class="sb-num">9</span>外链推广</a>
+      <a class="sb-link" href="/community"><span class="sb-num">10</span>社区增长</a>
+      <a class="sb-link" href="/monetize"><span class="sb-num">11</span>变现设计</a>
+      <a class="sb-link" href="/monitor"><span class="sb-num">12</span>监控闭环</a>
+      <div class="sb-group">系统</div>
+      <a class="sb-link" href="/settings">设置</a>
+    </nav>
+  </aside>
+<div class="wrap">
+    <section class="hero">
+      <div class="hero-kicker">KEYWORD RESEARCH · 阶段 0</div>
+      <h1>先想清楚<span class="hl">这个词值不值得做</span></h1>
+      <p class="hero-sub">没有 SimilarWeb / SEMrush 也能做：免费抓取 Google Suggest 长尾 + SERP 构成（内页占比、品牌站、广告块），算出 kdroi 与「值得做评分」，并给出是否该切入的结论。可叠加 Playwright 无头浏览器截图兜底。等买了会员再接 SerpApi / Keyword Planner 提升精度，架构不用改。</p>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="panel-head">
+          <div class="num">01</div>
+          <div><h2>调研参数</h2><div class="desc">种子关键词 + 目标市场 / 语言 / 品类（决定默认 CPC 量级）。</div></div>
+        </div>
+        <form id="f">
+          <div class="field full" style="margin-bottom:14px">
+            <label>种子关键词 <span class="req">*</span></label>
+            <input id="seed" required placeholder="ukulele chord trainer">
+            <span class="hint">围绕它做长尾扩展与 SERP 竞争分析。例如 ukulele chord trainer / saas landing page 等。</span>
+          </div>
+          <div class="grid2" style="margin-bottom:14px">
+            <div class="field">
+              <label>市场</label>
+              <select id="market">
+                <option value="us">美国 us</option>
+                <option value="gb">英国 gb</option>
+                <option value="ca">加拿大 ca</option>
+                <option value="au">澳洲 au</option>
+                <option value="cn">中国 cn</option>
+                <option value="jp">日本 jp</option>
+                <option value="de">德国 de</option>
+                <option value="fr">法国 fr</option>
+                <option value="in">印度 in</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>语言</label>
+              <select id="lang">
+                <option value="en">英文 en</option>
+                <option value="zh-CN">中文 zh-CN</option>
+                <option value="ja">日文 ja</option>
+                <option value="de">德文 de</option>
+                <option value="fr">法文 fr</option>
+                <option value="es">西文 es</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid2" style="margin-bottom:14px">
+            <div class="field">
+              <label>品类（默认 CPC 量级）</label>
+              <select id="category">
+                <option value="ukulele">尤克里里 / 乐器 music</option>
+                <option value="music">音乐 music</option>
+                <option value="saas">SaaS saas</option>
+                <option value="software">软件 software</option>
+                <option value="finance">金融 finance</option>
+                <option value="insurance">保险 insurance</option>
+                <option value="health">健康 health</option>
+                <option value="fitness">健身 fitness</option>
+                <option value="education">教育 education</option>
+                <option value="travel">旅行 travel</option>
+                <option value="game">游戏 game</option>
+                <option value="general">通用 general</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>手填 CPC（可选，$）</label>
+              <input id="cpc" type="number" step="0.1" min="0" placeholder="留空用品类默认">
+              <span class="hint">会员 API 接入后会自动覆盖此项。</span>
+            </div>
+          </div>
+          <label class="check" style="margin-bottom:6px">
+            <input id="screenshot" type="checkbox">
+            <span>启用 Playwright 无头浏览器截图兜底（需已装 playwright + chromium）</span>
+          </label>
+          <div class="field full" style="margin-top:14px">
+            <label>截图辅助分析（Similarweb / Semrush 指标面板截图，可选）</label>
+            <div class="upload" id="uploadBox">点击选择截图（最多 3 张）——登录 Similarweb / Semrush 后截图月访问、跳出率、流量结构等面板，自动提取指标参与分析</div>
+            <input id="shots" type="file" accept="image/*" multiple hidden>
+            <div class="thumbs" id="thumbs"></div>
+            <span class="hint">未配置视觉模型（VISION_LLM_API_KEY）时截图仅存档，请改用下方手填指标。</span>
+          </div>
+          <div class="grid2" style="margin-top:12px">
+            <div class="field"><label>月访问量（手填，可选）</label><input id="mVisits" type="number" min="0" placeholder="如 120000"></div>
+            <div class="field"><label>跳出率 %（手填）</label><input id="mBounce" type="number" min="0" max="100" step="0.1" placeholder="如 42"></div>
+          </div>
+          <div class="grid2" style="margin-top:12px">
+            <div class="field"><label>人均页数</label><input id="mPages" type="number" min="0" step="0.1" placeholder="如 2.4"></div>
+            <div class="field"><label>平均停留（秒）</label><input id="mDur" type="number" min="0" placeholder="如 145"></div>
+          </div>
+          <div style="margin-top:18px" class="row">
+            <button class="btn" id="submit" type="submit">开始需求调研 <span class="arr">→</span></button>
+            <span id="formMsg" class="hint"></span>
+          </div>
+        </form>
+      </section>
+
+      <div class="col-status">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="num">02</div>
+            <div><h2>综合分析报告</h2><div class="desc">长尾 / SERP 快照 / kdroi / 值得做结论。</div></div>
+          </div>
+          <div class="row">
+            <span id="status" class="status-pill">待提交</span>
+            <span id="jobId" class="hint"></span>
+          </div>
+          <div id="progWrap" style="display:none">
+            <div class="pbar"><i id="pbarFill"></i></div>
+            <div class="steps" id="steps"></div>
+          </div>
+          <div id="planBox"></div>
+          <div id="report" class="report" style="display:none"></div>
+          <div id="placeholder" class="note">提交后，这里会实时显示调研进度，随后展示综合分析报告：六维雷达图、长尾词机会、指标佐证、是否值得做、kdroi 与竞争难度。</div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+let timer = null;
+let shotData = [];   // [{name, data_url}]
+
+function setStatus(s){
+  const pill = $('status');
+  pill.className = 'status-pill ' + (s==='building'?'building':s==='done'?'done':s==='error'?'error':'');
+  const map = {idle:'待提交',submitted:'已提交',running:'调研中',building:'调研中',done:'已完成',error:'出错'};
+  pill.textContent = map[s] || s;
+}
+
+/* ---------- 截图上传 ---------- */
+$('uploadBox').addEventListener('click', ()=>$('shots').click());
+$('shots').addEventListener('change', e=>{
+  const files = Array.from(e.target.files||[]);
+  for(const f of files){
+    if(shotData.length>=3) break;
+    const rd = new FileReader();
+    rd.onload = () => {
+      if(shotData.length>=3) return;
+      shotData.push({name:f.name, data_url:rd.result});
+      renderThumbs();
+    };
+    rd.readAsDataURL(f);
+  }
+  e.target.value = '';
+});
+function renderThumbs(){
+  $('thumbs').innerHTML = shotData.map((s,i)=>
+    `<div class="thumb"><img src="${s.data_url}" alt="${s.name}"><button type="button" data-i="${i}">×</button></div>`
+  ).join('');
+  $('thumbs').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    shotData.splice(parseInt(b.dataset.i,10),1); renderThumbs();
+  }));
+}
+
+/* ---------- 进度渲染 ---------- */
+function renderProgress(j){
+  const steps = j.steps || [];
+  const cur = j.progress || {};
+  if(steps.length===0 && !cur.label){ $('progWrap').style.display='none'; return; }
+  $('progWrap').style.display = 'block';
+  $('pbarFill').style.width = (cur.pct!=null ? cur.pct : 0) + '%';
+  const rows = steps.map(s=>{
+    const pct = (s.detail||'').replace('%','').trim();
+    return `<div class="step ok"><span class="dot"></span><span>${s.node||''}</span><span class="pct">${pct?pct+'%':''}</span></div>`;
+  });
+  if(cur.label && (!steps.length || steps[steps.length-1].node!==cur.label)){
+    rows.push(`<div class="step on"><span class="dot"></span><span>${cur.label}</span><span class="pct">${cur.pct||0}%</span></div>`);
+  }
+  $('steps').innerHTML = rows.join('');
+}
+
+/* ---------- 结果卡片：雷达 / 长尾 / 指标佐证 ---------- */
+function renderPlan(plan){
+  if(!plan){ return; }
+  let html = '';
+  const me = plan.metricsEvidence || {};
+  const ev = me.data;
+  if(ev || (me.shots||[]).length){
+    const g = (k,v)=> (v===null||v===undefined||v==='')?'':`<div class="ev"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+    const ts = ev && ev.trafficSources || {};
+    html += `<div class="pcard"><h3>📊 指标佐证 <span class="tag">${(ev&&ev.source)||'截图存档'}</span></h3><div class="ev-grid">`
+      + g('月访问量', ev&&ev.monthlyVisits!=null?Number(ev.monthlyVisits).toLocaleString():'—')
+      + g('访问趋势', ev&&ev.visitsTrendPct!=null?(ev.visitsTrendPct+'%'):'—')
+      + g('跳出率', ev&&ev.bounceRate!=null?(ev.bounceRate+'%'):'—')
+      + g('人均页数', ev&&ev.pagesPerVisit!=null?ev.pagesPerVisit:'—')
+      + g('平均停留', ev&&ev.avgVisitDurationSeconds!=null?(ev.avgVisitDurationSeconds+'s'):'—')
+      + g('自然流量', ts.organic!=null?(ts.organic+'%'):'—')
+      + g('付费流量', ts.paid!=null?(ts.paid+'%'):'—')
+      + g('全球排名', ev&&ev.globalRank!=null?ev.globalRank:'—')
+      + `</div>`;
+    if(ev&&ev.topKeywords&&ev.topKeywords.length){
+      html += `<div class="hint" style="margin-top:8px">热门关键词：${ev.topKeywords.slice(0,8).join(' / ')}</div>`;
+    }
+    if(me.note){ html += `<div class="hint" style="margin-top:6px">${me.note}</div>`; }
+    if((me.shots||[]).length){
+      html += `<div class="ev-grid" style="margin-top:10px">` + me.shots.map(u=>`<div class="ev"><img src="${u}" alt="指标截图"></div>`).join('') + `</div>`;
+    }
+    html += `</div>`;
+  }
+  if(plan.radar && plan.radar.svg){
+    html += `<div class="pcard"><h3>🧭 六维雷达 <span class="tag">机会评估</span></h3>${plan.radar.svg}</div>`;
+  }
+  if(plan.longtail && plan.longtail.length){
+    html += `<div class="pcard"><h3>🎯 长尾词机会 <span class="tag">TOP ${plan.longtail.length}</span></h3>`
+      + `<table class="lt"><thead><tr><th>分</th><th>意图</th><th>难度</th><th>建议页面</th><th>关键词</th></tr></thead><tbody>`
+      + plan.longtail.map(it=>`<tr><td><span class="score-pill">${it.score}</span></td><td>${it.intentLabel||it.intent}</td><td>${it.difficulty}</td><td>${it.pageType}</td><td class="kw">${it.keyword}</td></tr>`).join('')
+      + `</tbody></table></div>`;
+  }
+  $('planBox').innerHTML = html;
+}
+
+function renderReport(text){
+  const el = $('report');
+  el.style.display = 'block';
+  $('placeholder').style.display = 'none';
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = String(text||'').split('\n');
+  let html = '';
+  for(const raw of lines){
+    let line = esc(raw);
+    if(/^={3,}/.test(raw)){ html += '<div class="sec">'+line+'</div>'; continue; }
+    if(/结论[:：]/.test(raw)){ html += '<div class="verdict">'+line+'</div>'; continue; }
+    if(/值得做|✅/.test(raw)) line = '<span class="ok">'+line+'</span>';
+    else if(/暂不优先|🔴|失败|error/i.test(raw)) line = '<span class="err">'+line+'</span>';
+    else if(/可尝试|🟡|建议|注意|warn/i.test(raw)) line = '<span class="warn">'+line+'</span>';
+    else line = '<span class="muted">'+line+'</span>';
+    html += line + '\n';
+  }
+  el.innerHTML = html;
+}
+
+function poll(jobId){
+  clearInterval(timer);
+  timer = setInterval(async ()=>{
+    try{
+      const r = await fetch('/api/job/'+jobId);
+      if(r.status===404){
+        clearInterval(timer);
+        setStatus('error');
+        $('formMsg').textContent = '任务已丢失（bridge 可能重启过），请重新提交';
+        $('submit').disabled = false;
+        return;
+      }
+      const d = await r.json();
+      if(d.ok && d.job){
+        const j = d.job;
+        setStatus(j.status || 'building');
+        $('jobId').textContent = j.id ? ('任务号 '+j.id) : '';
+        if(j.statusText) $('formMsg').textContent = j.statusText;
+        renderProgress(j);
+        if(j.plan) renderPlan(j.plan);
+        if(j.result) renderReport(j.result);
+        if(j.status==='done' || j.status==='error'){
+          clearInterval(timer);
+          $('submit').disabled = false;
+          if(j.status==='done') $('formMsg').textContent = '调研完成';
+        }
+      }
+    }catch(e){ /* ignore */ }
+  }, 1500);
+}
+
+$('f').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const seed = $('seed').value.trim();
+  if(!seed){ $('formMsg').textContent='请填写种子关键词'; return; }
+  $('submit').disabled = true;
+  $('formMsg').textContent = '提交中…';
+  const num = id => { const v = $(id).value.trim(); return v===''?null:parseFloat(v); };
+  const manualMetrics = {};
+  if(num('mVisits')!=null) manualMetrics.monthlyVisits = num('mVisits');
+  if(num('mBounce')!=null) manualMetrics.bounceRate = num('mBounce');
+  if(num('mPages')!=null) manualMetrics.pagesPerVisit = num('mPages');
+  if(num('mDur')!=null) manualMetrics.avgVisitDurationSeconds = num('mDur');
+  const spec = {
+    seed,
+    market: $('market').value,
+    lang: $('lang').value,
+    category: $('category').value,
+    cpc: $('cpc').value ? parseFloat($('cpc').value) : null,
+    screenshot: $('screenshot').checked,
+    screenshots: shotData,
+    manualMetrics: Object.keys(manualMetrics).length ? manualMetrics : null,
+  };
+  try{
+    const r = await fetch('/api/research', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({spec})});
+    const d = await r.json();
+    if(d.ok){
+      $('formMsg').textContent = '已开始调研…';
+      $('planBox').innerHTML = '';
+      $('report').style.display = 'none';
+      $('placeholder').style.display = 'block';
+      setStatus('building');
+      renderProgress({progress:{label:'任务已提交，准备开始…', pct:2}, steps:[]});
+      poll(d.jobId);
+    } else {
+      $('formMsg').textContent = '提交失败：'+(d.error||'未知错误');
+      $('submit').disabled = false;
+    }
+  }catch(err){
+    $('formMsg').textContent = '网络错误：'+err.message;
+    $('submit').disabled = false;
+  }
+});
+</script>
+
+
+
+
+
+<!-- ORCH:BEGIN 编排查看标签页（本页调用的 n8n 流程与技能） -->
+<style>
+  .orch-tab{position:fixed;right:0;top:34%;z-index:70;writing-mode:vertical-rl;letter-spacing:.08em;
+    padding:14px 9px;border:1px solid var(--line,rgba(23,19,27,.12));border-right:0;border-radius:12px 0 0 12px;
+    background:var(--surface,#fffdf9);color:var(--accent-ink,#4a25c9);cursor:pointer;
+    font:600 12.5px/1 var(--font-body,"PingFang SC","Microsoft YaHei",sans-serif);
+    box-shadow:var(--shadow-1,0 2px 8px rgba(23,19,27,.08));transition:var(--dur-fast,170ms)}
+  .orch-tab:hover{background:var(--accent-soft,rgba(91,52,230,.10));color:var(--accent,#5b34e6)}
+  .orch-mask{position:fixed;inset:0;z-index:80;background:rgba(23,19,27,.34);backdrop-filter:blur(2px)}
+  .orch-mask[hidden]{display:none}
+  .orch-panel{position:fixed;top:0;right:0;bottom:0;width:min(460px,94vw);z-index:90;overflow:auto;
+    background:var(--surface,#fffdf9);border-left:1px solid var(--line,rgba(23,19,27,.12));
+    box-shadow:var(--shadow-2,0 12px 32px rgba(23,19,27,.16));padding:22px 24px 48px;
+    font-family:var(--font-body,"PingFang SC","Microsoft YaHei",sans-serif);color:var(--ink,#17131b)}
+  .orch-panel[hidden]{display:none}
+  .orch-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+  .orch-head b{font-size:18px;display:block}
+  .orch-head span{display:block;margin-top:4px;font-size:12.5px;color:var(--muted,#5f5867)}
+  .orch-x{margin-left:auto;border:1px solid var(--line,rgba(23,19,27,.12));background:var(--surface-2,#f1ece2);
+    color:var(--ink,#17131b);border-radius:999px;width:30px;height:30px;cursor:pointer;font-size:14px;flex:none}
+  .orch-sec{margin-top:20px}
+  .orch-sec h4{margin:0 0 10px;font-size:13px;letter-spacing:.06em;color:var(--accent,#5b34e6);text-transform:uppercase}
+  .orch-card{border:1px solid var(--line,rgba(23,19,27,.12));border-radius:var(--radius,14px);padding:12px 14px;margin-bottom:10px;background:var(--surface-2,#f1ece2)}
+  .orch-card b{font-size:14px}
+  .orch-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;
+    background:var(--accent-soft,rgba(91,52,230,.12));color:var(--accent-ink,#4a25c9)}
+  .orch-meta{margin-top:6px;font-size:12px;color:var(--muted,#5f5867)}
+  .orch-desc{margin-top:6px;font-size:12.5px;color:var(--muted,#5f5867);line-height:1.6}
+  .orch-task{margin-top:8px;padding-left:12px;border-left:2px solid var(--accent,#5b34e6)}
+  .orch-task b{font-size:13px}
+  .orch-empty{font-size:12.5px;color:var(--muted,#5f5867);padding:10px 12px;border:1px dashed var(--line,rgba(23,19,27,.16));border-radius:var(--radius,14px)}
+  .orch-note{margin-top:18px;font-size:12.5px;line-height:1.7;color:var(--muted,#5f5867);
+    background:var(--accent-soft,rgba(91,52,230,.08));border-radius:var(--radius,14px);padding:12px 14px}
+</style>
+<button class="orch-tab" id="orchTab" type="button" title="查看本页调用的 n8n 流程与技能">查看 · n8n / 技能</button>
+<div class="orch-mask" id="orchMask" hidden></div>
+<aside class="orch-panel" id="orchPanel" hidden aria-label="编排查看">
+  <div class="orch-head">
+    <div><b>本页编排</b><span id="orchSub"></span></div>
+    <button class="orch-x" id="orchClose" type="button" aria-label="关闭">✕</button>
+  </div>
+  <div id="orchBody"></div>
+</aside>
+<script id="orchData" type="application/json">{"page":"research","step":1,"label":"需求调研","phase":"立项","note":"先跑 n8n 关键词调研工作流取真实联想词，再由 seo-research 套件做机会评估与意图聚类。","workflows":[{"slug":"keyword-research","name":"关键词需求调研（免费兜底版）","nodes":6,"hook":"","trigger":"工作流","types":"Webhook → HTTP 请求 → Code"}],"skills":[{"slug":"seo-research","name":"SEO 研究与竞品","desc":"关键词评估、意图聚类、SERP 竞争、竞品拆解、外链机会。","covers":"","tasks":[{"key":"keyword-evaluate","name":"关键词评估（值不值得做）","desc":"对种子词做长尾扩展、意图判断、竞争度与机会评估，产出可决策的优先级清单。"},{"key":"serp-intent","name":"SERP 意图与竞争分析","desc":"判断目标词的用户意图、SERP 形态与「能否竞争」，给出内容角度建议。"},{"key":"competitor","name":"竞品拆解","desc":"拆解指定竞品的流量来源、内容策略与外链模式，找出可借鉴与可反超的点。"}]}]}</script>
+<script>
+(function(){
+  var d = JSON.parse(document.getElementById('orchData').textContent);
+  var tab=document.getElementById('orchTab'), panel=document.getElementById('orchPanel'),
+      mask=document.getElementById('orchMask'), box=document.getElementById('orchBody'),
+      sub=document.getElementById('orchSub'), x=document.getElementById('orchClose');
+  function el(t,c,txt){var n=document.createElement(t); if(c)n.className=c; if(txt!=null)n.textContent=txt; return n;}
+  function build(){
+    sub.textContent = (d.step? ('第 '+d.step+' 步 · ') : '') + d.phase + ' · ' + d.label;
+    box.innerHTML='';
+    var s1=el('div','orch-sec'); s1.appendChild(el('h4','','n8n 流程'));
+    if(!d.workflows.length){ s1.appendChild(el('div','orch-empty','本页不经过 n8n，由后台技能引擎直接执行。')); }
+    d.workflows.forEach(function(w){
+      var c=el('div','orch-card'), t=el('div','');
+      t.appendChild(el('b','',w.name)); t.appendChild(el('span','orch-badge',w.trigger));
+      c.appendChild(t);
+      c.appendChild(el('div','orch-meta','节点 '+w.nodes+' 个'+(w.hook?(' · Webhook /'+w.hook):'')+(w.types?(' · '+w.types):'')));
+      s1.appendChild(c);
+    });
+    box.appendChild(s1);
+    var s2=el('div','orch-sec'); s2.appendChild(el('h4','','技能套件与任务'));
+    if(!d.skills.length){ s2.appendChild(el('div','orch-empty','本页不直接调用 SEO/GEO 技能套件。')); }
+    d.skills.forEach(function(s){
+      var c=el('div','orch-card'), t=el('div','');
+      t.appendChild(el('b','',s.name)); t.appendChild(el('span','orch-badge',s.slug));
+      c.appendChild(t);
+      c.appendChild(el('div','orch-desc',s.desc+(s.covers?('（'+s.covers+'）'):'')));
+      s.tasks.forEach(function(k){
+        var w=el('div','orch-task'); w.appendChild(el('b','',k.name));
+        w.appendChild(el('div','orch-desc',k.desc)); c.appendChild(w);
+      });
+      s2.appendChild(c);
+    });
+    box.appendChild(s2);
+    if(d.note){ box.appendChild(el('div','orch-note',d.note)); }
+  }
+  function open(){ build(); panel.hidden=false; mask.hidden=false; document.body.style.overflow='hidden'; }
+  function shut(){ panel.hidden=true; mask.hidden=true; document.body.style.overflow=''; }
+  tab.addEventListener('click',open); x.addEventListener('click',shut); mask.addEventListener('click',shut);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') shut(); });
+})();
+</script>
+<!-- ORCH:END -->
+</body>
+</html>
