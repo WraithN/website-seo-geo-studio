@@ -1,68 +1,112 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getJSON } from '../api';
+import { loadFlow, siteSteps } from '../flowMeta';
+
+const statusLabel: Record<string, string> = { pending: '待开始', running: '调研中', done: '已完成', error: '出错' };
+const statusClass: Record<string, string> = { pending: '', running: 'building', done: 'done', error: 'error' };
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
+  const [sites, setSites] = useState<any[]>([]);
+  const [steps, setSteps] = useState<any[]>([]);
   const [err, setErr] = useState('');
   const nav = useNavigate();
 
   useEffect(() => {
     getJSON('/dashboard').then(setData).catch((e) => setErr(String(e.message || e)));
+    getJSON('/sites').then((d) => setSites(d.sites || [])).catch(() => setSites([]));
+    loadFlow().then((s) => setSteps(siteSteps(s))).catch(() => setSteps([]));
   }, []);
 
   if (err) return <div className="loading">加载失败：{err}</div>;
   if (!data) return <div className="loading">加载中…</div>;
 
-  const statusLabel: Record<string, string> = { pending: '待开始', running: '调研中', done: '已完成', error: '出错' };
-  const statusClass: Record<string, string> = { pending: '', running: 'building', done: 'done', error: 'error' };
+  const hasStarted = sites.length > 0 || (data.recentJobs || []).length > 0;
+  const nextStepFor = (site: any) => {
+    const done = new Set(site.doneTasks || []);
+    return steps.find((s) => !done.has(s.task));
+  };
 
   return (
     <>
       <section className="hero">
         <div className="kicker">SEO / GEO 流量获客工作室</div>
-        <h1>按<span className="hl">站点</span>推进获客全链路</h1>
+        <h1>帮你把<span className="hl">一个想法</span>做成有流量的海外站</h1>
         <p className="hero-sub">
-          先做需求调研判断「值不值得做」，再创建站点：每个站点收拢「创建站点 → 内容生产 → 合规优化 → SEO·GEO → 外链推广 → 线上监控」全部步骤。
-          建档信息（产品名/域名/面向地区/定位/语言）作为统一上下文自动带入后续步骤，无需再「引用上一步」。
-          每一步都可直接执行：填写必要信息，得到可落地的结果。SEO/GEO 技能与 n8n 工作流在后台自动调用。
+          三步走：先做需求调研判断「值不值得做」，再创建站点一键产出方案，最后上线并持续监控。
+          建档信息会自动带入后续每一步，你不用懂 SEO、n8n、技术细节。
         </p>
+        <div className="row" style={{ marginTop: 18, gap: 10 }}>
+          <button className="btn" onClick={() => nav('/research')}>开始：需求调研 →</button>
+          <button className="btn ghost" onClick={() => nav('/sites')}>查看我的站点</button>
+        </div>
       </section>
 
-      <div className="grid cols-3">
-        <div className="card" onClick={() => nav('/sites')} style={{ cursor: 'pointer' }}>
-          <h3>我的站点</h3>
-          <div className="big">站点</div>
-          <div className="hint">每个站点收拢建站全链路（建档→内容→合规→SEO→外链→监控）</div>
+      {sites.length > 0 ? (
+        <div className="card" style={{ marginTop: 20 }}>
+          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>继续推进你的站点</h3>
+            <Link className="link" style={{ marginLeft: 'auto' }} to="/sites">全部 →</Link>
+          </div>
+          <div className="flow-chain" style={{ marginTop: 12 }}>
+            {sites.slice(0, 3).map((s: any) => {
+              const ns = nextStepFor(s);
+              const done = (s.doneTasks || []).length;
+              return (
+                <div key={s.id} className="site-card" onClick={() => nav('/sites/' + s.id)}>
+                  <div className="site-name">{s.name}</div>
+                  <div className="site-meta">
+                    {s.domain ? <span className="tag">{s.domain}</span> : <span className="tag muted">未定域名</span>}
+                    <span className="tag">{done}/{steps.length} 步</span>
+                  </div>
+                  <div className="site-progress">
+                    <div className="site-bar"><i style={{ width: Math.round((done / Math.max(steps.length, 1)) * 100) + '%' }} /></div>
+                  </div>
+                  <div className="site-next">
+                    {ns ? <>下一步：<b>「{ns.label}」</b> →</> : '全部步骤已完成 🎉'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="card" onClick={() => nav('/research')} style={{ cursor: 'pointer' }}>
-          <h3>从这一步开始</h3>
-          <div className="big">1</div>
-          <div className="hint">需求调研：判断值不值得做</div>
+      ) : (
+        <div className="card" style={{ marginTop: 20 }}>
+          <h3 style={{ margin: 0 }}>新手上路 · 从想法到有流量的海外站</h3>
+          <p className="hint" style={{ margin: '6px 0 16px' }}>
+            全程不用懂 SEO / n8n / 技术细节，跟着这三步走就行。
+          </p>
+          <div className="onboard">
+            <div className="on-step">
+              <span className="on-num">1</span>
+              <div>
+                <div className="on-title">判断值不值得做</div>
+                <div className="on-desc">输入一个关键词，用免费数据看需求大小、竞争难度与商业价值。</div>
+              </div>
+            </div>
+            <div className="on-step">
+              <span className="on-num">2</span>
+              <div>
+                <div className="on-title">一键创建站点</div>
+                <div className="on-desc">调研结论自动带入，生成页面矩阵、SEO 架构、合规清单与内容。</div>
+              </div>
+            </div>
+            <div className="on-step">
+              <span className="on-num">3</span>
+              <div>
+                <div className="on-title">上线并持续监控</div>
+                <div className="on-desc">部署上线后持续看流量与收录，判断「继续养」还是「该撤」。</div>
+              </div>
+            </div>
+          </div>
+          <button className="btn" style={{ marginTop: 18 }} onClick={() => nav('/research')}>开始第一步：输入关键词 →</button>
         </div>
-        <div className="card" onClick={() => nav('/workflows')} style={{ cursor: 'pointer' }}>
-          <h3>n8n 工作流</h3>
-          <div className="big">{data.counts.workflows}</div>
-          <div className="hint">个流程（含站点建站与增长链路）</div>
-        </div>
-      </div>
+      )}
 
-      <div className="grid cols-2" style={{ marginTop: 18 }}>
-        <div className="card" onClick={() => nav('/pages')} style={{ cursor: 'pointer' }}>
-          <h3>建站页面</h3>
-          <div className="big">{data.counts.pages}</div>
-          <div className="hint">个页面（按流程链条排序，可在线预览）</div>
-        </div>
-        <div className="card" onClick={() => nav('/settings/orchestration')} style={{ cursor: 'pointer' }}>
-          <h3>流程编排</h3>
-          <div className="big">9</div>
-          <div className="hint">个节点（查看各自调用的 n8n 与技能）</div>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: 18 }}>
+      <div className="card" style={{ marginTop: 20 }}>
         <h3>最近调研任务</h3>
-        {data.recentJobs.length === 0 ? (
+        {!data.recentJobs || data.recentJobs.length === 0 ? (
           <div className="empty">还没有调研任务，去 <a onClick={() => nav('/research')} style={{ color: 'var(--accent-ink)', cursor: 'pointer' }}>需求调研</a> 跑一个吧。</div>
         ) : (
           <div className="list" style={{ marginTop: 8 }}>

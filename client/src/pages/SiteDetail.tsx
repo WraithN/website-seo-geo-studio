@@ -1,43 +1,81 @@
-// 站点详情：展示建档信息 + 站点内 8 步流程（每步可点开执行）+ 近期运行。
-// 每个步骤的执行都自动带上建档上下文，无需「引用上一步」。
+// 站点详情：建档信息 + 站点内 8 步流程 + 站点工程（真实可部署文件）+ 执行记录。
+// 步骤与完成判定统一来自后端 /flow；建档上下文自动带入，无需「引用上一步」。
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getJSON } from '../api';
+import { getJSON, postJSON } from '../api';
+import { loadFlow, siteSteps, type FlowStep } from '../flowMeta';
+import DeployPanel from '../components/DeployPanel';
 
-const SITE_STEPS = [
-  { key: 'create', label: '创建站点', phase: '建站', goal: '建档：产品名/域名/面向地区/定位/语言 → 站点规格与页面矩阵' },
-  { key: 'seo', label: 'SEO·GEO 优化', phase: '优化', goal: '关键词→页面映射、内链骨架、meta/llms.txt 模板、答案块规划' },
-  { key: 'compliance', label: '合规优化', phase: '合规', goal: '按面向地区输出合规清单（隐私/Cookie/数据处理/未成年人等）' },
-  { key: 'techseo', label: '技术SEO·GEO', phase: '技术', goal: '验收清单 + 生成 robots.txt / sitemap.xml / llms.txt' },
-  { key: 'content', label: '内容生产', phase: '内容', goal: 'blog 规划 → 内容成稿 → 去AI味 → EEAT 验证（带论文/权威博客引用）' },
-  { key: 'deploy', label: '部署上线', phase: '上线', goal: '上线检查清单与部署步骤，提交 GSC/Bing 站长平台' },
-  { key: 'backlink', label: '外链推广', phase: '运营', goal: '按外链质量排序找可争取的外链/引用机会' },
-  { key: 'monitor', label: '线上监控', phase: '运营', goal: 'UV/PV、跳出、停留、GSC 覆盖与 AdSense 覆盖率 → 养站决策' },
-];
-
-const STEP_TASK: Record<string, string> = {
-  create: 'create-site', content: 'content-pipeline', seo: 'geo-optimize',
-  compliance: 'compliance-check', techseo: 'audit', deploy: 'deploy-plan',
-  backlink: 'link-prospecting', monitor: 'gsc-monitor',
-};
+type ScaffoldFile = { path: string; size: number; mtime: string };
 
 export default function SiteDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const [site, setSite] = useState<any>(null);
   const [runs, setRuns] = useState<any[]>([]);
+  const [steps, setSteps] = useState<FlowStep[]>([]);
   const [err, setErr] = useState('');
+
+  // 站点工程
+  const [files, setFiles] = useState<ScaffoldFile[]>([]);
+  const [scaffoldMeta, setScaffoldMeta] = useState<any>(null);
+  const [generating, setGenerating] = useState(false);
+  const [genMsg, setGenMsg] = useState('');
+  const [selFile, setSelFile] = useState('');
+  const [fileText, setFileText] = useState('');
 
   useEffect(() => {
     if (!id) return;
     getJSON('/sites/' + id).then((d) => { setSite(d.site); setRuns(d.runs || []); }).catch((e) => setErr(String(e.message || e)));
+    loadFlow().then((s) => setSteps(siteSteps(s))).catch(() => {});
+    loadScaffold();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const loadScaffold = () => {
+    if (!id) return;
+    getJSON('/sites/' + id + '/scaffold')
+      .then((d) => { setFiles(d.files || []); setScaffoldMeta(d.meta || null); })
+      .catch(() => { setFiles([]); setScaffoldMeta(null); });
+  };
+
+  const generate = async () => {
+    if (!id) return;
+    setGenerating(true); setGenMsg('');
+    try {
+      const d = await postJSON('/sites/' + id + '/scaffold', {});
+      if (!d.ok) throw new Error(d.error || '生成失败');
+      setFiles(d.files || []);
+      setScaffoldMeta({ generatedAt: new Date().toISOString(), pages: (d.pages || []).length });
+      setGenMsg(`已生成 ${d.files?.length || 0} 个文件，覆盖 ${(d.pages || []).length} 个页面${d.pages?.length ? '：' + d.pages.map((p: any) => p.path).slice(0, 6).join('、') : ''}`);
+      setSelFile('index.html');
+    } catch (e: any) {
+      setGenMsg('生成失败：' + (e?.message || ''));
+    }
+    setGenerating(false);
+  };
+
+  const openFile = async (p: string) => {
+    if (!id) return;
+    setSelFile(p);
+    const isText = /\.(html|css|js|json|xml|txt|md|toml)$/i.test(p);
+    if (!isText) { setFileText('（二进制文件，请下载后查看）'); return; }
+    try {
+      const r = await fetch(`/api/sites/${id}/scaffold/file?p=${encodeURIComponent(p)}`);
+      setFileText(await r.text());
+    } catch { setFileText('读取失败'); }
+  };
 
   if (err) return <div className="loading">加载失败：{err}</div>;
   if (!site) return <div className="loading">加载中…</div>;
 
   const done = new Set(site.doneTasks || []);
-  const doneCount = SITE_STEPS.filter((s) => done.has(STEP_TASK[s.key])).length;
+  const doneCount = steps.filter((s) => done.has(s.task)).length;
+  const firstPending = steps.find((s) => !done.has(s.task));
+  const taskLabel: Record<string, string> = Object.fromEntries(steps.map((s) => [s.task, s.label]));
+  const previewSrc = selFile.toLowerCase().endsWith('.html') && id
+    ? `/api/sites/${id}/scaffold/static/${selFile}`
+    : '';
 
   return (
     <>
@@ -47,31 +85,109 @@ export default function SiteDetail() {
         <div className="kicker">站点 · {site.region}</div>
         <h1><span className="hl">{site.name}</span></h1>
         <p className="hero-sub">{site.positioning || '（未填写产品定位）'}</p>
+        {site.research?.verdict && (
+          <div className="alert" style={{ marginTop: 12, display: 'inline-block' }}>
+            <b>调研结论</b>：{site.research.verdict}
+            {site.research.topKeywords?.length ? (
+              <div className="hint" style={{ marginTop: 4 }}>建议优先做的长尾词：{site.research.topKeywords.slice(0, 8).join('、')}</div>
+            ) : null}
+          </div>
+        )}
         <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           {site.domain && <span className="tag">{site.domain}</span>}
           <span className="tag">{site.language}</span>
           <span className="tag">{site.site_type || '站点类型未定'}</span>
-          <span className="tag">{doneCount}/{SITE_STEPS.length} 步完成</span>
+          <span className="tag">{site.monetization || '收费模式未定'}{site.price ? ` · ${site.price}` : ''}</span>
+          <span className="tag">{doneCount}/{steps.length} 步完成</span>
         </div>
         <div className="row" style={{ marginTop: 14, gap: 10 }}>
-          <Link to={`/sites/${site.id}/create`} className="btn">从「创建站点」开始 →</Link>
+          <Link to={`/sites/${site.id}/${firstPending ? firstPending.key : 'create'}`} className="btn">
+            {firstPending ? `继续「${firstPending.label}」→` : '从「创建站点」开始 →'}
+          </Link>
           <Link to="/sites" className="btn ghost">站点列表</Link>
         </div>
       </section>
 
+      {/* ===== 站点工程：真实可部署文件 ===== */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="row" style={{ gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ margin: 0 }}>站点工程（可直接部署的真实文件）</h3>
+            <div className="hint" style={{ marginTop: 4 }}>
+              把建档信息、页面矩阵、收费模式变成真的 HTML / CSS / sitemap / 定价页，不是建议。
+            </div>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn" onClick={generate} disabled={generating}>
+              {generating ? '生成中…' : files.length ? '重新生成' : '生成站点工程 →'}
+            </button>
+            {files.length > 0 && (
+              <a className="btn ghost" href={`/api/sites/${site.id}/scaffold.zip`}>下载整站 zip</a>
+            )}
+          </div>
+        </div>
+
+        {genMsg && <div className={'alert ' + (genMsg.startsWith('生成失败') ? 'err' : 'ok')}>{genMsg}</div>}
+
+        {files.length === 0 ? (
+          <div className="empty" style={{ marginTop: 10 }}>
+            还没有站点工程。点「生成站点工程」，系统会按你的页面矩阵生成首页、内容页、定价页、隐私/条款、sitemap、robots、llms.txt 与部署配置。
+          </div>
+        ) : (
+          <>
+            <div className="row" style={{ gap: 10, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+              <span className="tag">{files.length} 个文件</span>
+              {scaffoldMeta?.generatedAt && <span className="muted">生成于 {String(scaffoldMeta.generatedAt).slice(0, 16).replace('T', ' ')}</span>}
+              <a className="link" style={{ marginLeft: 'auto' }} href={`/api/sites/${site.id}/scaffold/static/index.html`} target="_blank" rel="noreferrer">
+                新窗口预览整站 ↗
+              </a>
+            </div>
+
+            <div className="scaffold-grid">
+              <div className="scaffold-list">
+                {files.map((f) => (
+                  <div
+                    key={f.path}
+                    className={'sf-row' + (selFile === f.path ? ' active' : '')}
+                    onClick={() => openFile(f.path)}
+                  >
+                    <span className="sf-name">{f.path}</span>
+                    <span className="sf-size">{Math.max(1, Math.round(f.size / 1024))} KB</span>
+                  </div>
+                ))}
+              </div>
+              <div className="scaffold-preview">
+                {!selFile ? (
+                  <div className="empty">选择左侧文件查看内容，或直接看整站预览。</div>
+                ) : previewSrc ? (
+                  <iframe title={selFile} src={previewSrc} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
+                ) : (
+                  <pre className="sf-code">{fileText}</pre>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 20 }}>
+        <h3>部署清单（按顺序打勾就能上线）</h3>
+        <DeployPanel siteId={site.id} />
+      </div>
+
       <div className="card" style={{ marginTop: 20 }}>
         <h3>站点流程（建档上下文已自动带入，无需引用上一步）</h3>
         <div className="flow-chain" style={{ marginTop: 12 }}>
-          {SITE_STEPS.map((s, i) => {
-            const isDone = done.has(STEP_TASK[s.key]);
+          {steps.map((s) => {
+            const isDone = done.has(s.task);
             return (
               <div key={s.key} className="flow-step" onClick={() => nav(`/sites/${site.id}/${s.key}`)}>
                 <div className="fs-head">
-                  <span className="fs-num">{i + 1}</span>
+                  <span className="fs-num">{s.step}</span>
                   <span className="fs-label">{s.label}</span>
                   {isDone && <span className="pill ok" style={{ marginLeft: 'auto' }}>已执行</span>}
                 </div>
-                <div className="fs-desc">{s.goal}</div>
+                <div className="fs-desc">{s.desc}</div>
                 <div className="fs-meta"><span className="tag">{s.phase}</span></div>
               </div>
             );
@@ -91,7 +207,7 @@ export default function SiteDetail() {
             {runs.slice(0, 10).map((r: any) => (
               <div className="hist-row" key={r.id} onClick={() => nav('/history')}>
                 <span className={`dot ${r.status}`} />
-                <span className="hist-task">{r.task}</span>
+                <span className="hist-task">{taskLabel[r.task] || r.task}</span>
                 <span className="muted">{r.createdAt}{r.error ? ' · ' + r.error : ''}</span>
               </div>
             ))}

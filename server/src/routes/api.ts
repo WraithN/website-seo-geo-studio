@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -9,11 +10,40 @@ import { SUITES, allTasks, findTask } from '../skills/registry.js';
 import { STEP_DEFS, findStepDef } from '../steps.js';
 import { executeRun, loadSkillMd, type RunnerDeps, type RunRow, WORKSPACE_DIR } from '../skills/runner.js';
 import { llmAvailable } from '../llm.js';
+import { buildScaffold, type ScaffoldPage } from '../scaffold.js';
+import { createZip } from '../zip.js';
 
 export const api = Router();
 
 /** 原「建站助手」Python bridge 地址：代理提交/轮询 legacy 引擎任务用 */
 const BRIDGE_BASE = process.env.BRIDGE_BASE || 'http://127.0.0.1:8788';
+
+/** 执行状态广播总线：运行过程中每次更新都推给前端（SSE），替代客户端轮询 */
+const runEvents = new EventEmitter();
+
+/** 把某次执行更新后的状态广播给已连接的 SSE 客户端 */
+function emitRun(rid: string): void {
+  try {
+    const row = get('SELECT * FROM skill_runs WHERE id=?', [rid]) as any;
+    if (row) runEvents.emit('run', { type: 'run', run: runSummary(row) });
+  } catch { /* 广播失败不影响执行 */ }
+}
+function runSummary(r: any): any {
+  return {
+    id: r.id,
+    suite: r.suite,
+    task: r.task,
+    status: r.status,
+    progress: r.progress,
+    statusText: r.status_text,
+    hasArtifact: !!r.artifact_md,
+    createdAt: r.created_at,
+    finishedAt: r.finished_at,
+    error: r.error,
+    upstreamId: r.upstream_id,
+    siteId: r.site_id,
+  };
+}
 
 const SUITE_LABEL: Record<string, string> = {
   'seo-orchestrator': '总控编排', 'seo-research': '关键词/竞品/外链',
@@ -271,6 +301,7 @@ api.get('/flow', (_req, res) => {
       step: s.step,
       key: s.key,
       label: s.label,
+      task: s.task,
       phase: s.phase,
       group: s.group,
       groupLabel: FLOW_GROUP_LABEL[s.group],
@@ -501,10 +532,12 @@ api.get('/steps', (_req: Request, res: Response) => {
       step: s.step,
       key: s.key,
       label: s.label,
+      task: s.exec.task,
       phase: s.phase,
       goal: s.goal,
       inputs: s.inputs,
       outputs: s.outputs,
+      outputLabels: s.outputLabels,
       // 后台编排信息：只在「流程编排」设置页展示，不在主流程界面暴露
       backend: s.backend,
     })),
@@ -517,6 +550,8 @@ function applySiteContext(input: Record<string, any>, siteId?: string): { input:
   if (!siteId) return { input: input || {} };
   const s = getSite(siteId);
   if (!s) return { input: input || {} };
+  const profile = safeJson(s.profile_json || '{}');
+  const research = profile.research || null;
   const defaults: Record<string, any> = {
     siteName: s.name,
     domain: s.domain,
@@ -527,14 +562,55 @@ function applySiteContext(input: Record<string, any>, siteId?: string): { input:
     site: s.domain || s.name,
     appName: s.name,
     product: s.name,
+    monetization: s.monetization || '',
+    price: s.price || '',
+    research,
   };
   const merged: Record<string, any> = { ...defaults };
   for (const [k, v] of Object.entries(input || {})) {
     // 用户留空 → 保留站点档案值；用户填写 → 覆盖
     if (v !== undefined && v !== null && String(v).trim() !== '') merged[k] = v;
   }
-  const siteContext = `站点上下文（来自建档，无需引用上一步）：产品名=${s.name || '未命名'}；域名=${s.domain || '未定'}；面向地区=${s.region || '未指定'}；定位=${s.positioning || '未提供'}；语言=${s.language || '英语'}。后续判断请以该上下文为准。`;
+  const researchLine = research
+    ? `；调研结论=${research.verdict || '—'}（种子词=${research.seed || '—'}，建议长尾词=${((research.topKeywords || []).slice(0, 8)).join('、') || '—'}）`
+    : '';
+  const siteContext = `站点上下文（来自建档，无需引用上一步）：产品名=${s.name || '未命名'}；域名=${s.domain || '未定'}；面向地区=${s.region || '未指定'}；定位=${s.positioning || '未提供'}；语言=${s.language || '英语'}；收费模式=${s.monetization || '未指定'}${s.price ? `（目标定价 ${s.price}）` : ''}${researchLine}。后续判断请以该上下文为准。`;
   return { input: merged, siteContext };
+}
+
+/**
+ * 部署上下文：把「站点工程」的真实状态注入部署步骤，
+ * 让模型基于实际文件清单出部署方案，而不是泛泛而谈。
+ */
+function deployContextFor(site: any): { summary: string; facts: any } | null {
+  if (!site) return null;
+  const dir = scaffoldDir(site.id);
+  const files = listScaffold(dir).filter((f) => !f.path.startsWith('.'));
+  const domain = String(site.domain || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+  let todo = 0;
+  for (const f of files) {
+    try {
+      const t = fs.readFileSync(path.join(dir, f.path), 'utf-8');
+      todo += (t.match(/\[待补充[^\]]*\]/g) || []).length;
+    } catch { /* ignore */ }
+  }
+  const names = files.map((f) => f.path);
+  const facts = {
+    hasScaffold: files.length > 0,
+    fileCount: files.length,
+    hasSitemap: names.includes('sitemap.xml'),
+    hasRobots: names.includes('robots.txt'),
+    hasLlms: names.includes('llms.txt'),
+    hasPricing: names.includes('pricing.html'),
+    pages: files.filter((f) => f.path.endsWith('.html') && f.path !== '404.html').length,
+    pendingPlaceholders: todo,
+    domain,
+    monetization: site.monetization || '',
+  };
+  const summary = facts.hasScaffold
+    ? `站点工程已生成：${facts.fileCount} 个文件、${facts.pages} 个 HTML 页面；sitemap=${facts.hasSitemap ? '有' : '无'}，robots=${facts.hasRobots ? '有' : '无'}，llms.txt=${facts.hasLlms ? '有' : '无'}，定价页=${facts.hasPricing ? '有' : '无'}；仍有 ${todo} 处 [待补充] 待人工替换；域名=${domain || '未配置'}；收费模式=${facts.monetization || '未指定'}。`
+    : '站点工程尚未生成（无静态文件），部署方案需先完成「创建站点」生成工程。';
+  return { summary, facts };
 }
 
 /** 按流程步骤执行：前端只传步骤 key 与用户输入，后端决定调用哪个技能 */
@@ -550,6 +626,15 @@ api.post('/steps/:key/run', async (req: Request, res: Response) => {
   const mergedInput = ctxMerge.input;
   if (siteId && !getSite(siteId)) {
     return res.status(400).json({ ok: false, error: '站点不存在' });
+  }
+  // 部署步骤：注入「站点工程真实状态」，让方案基于实际文件而不是空谈
+  if (siteId && def.key === 'deploy') {
+    const dc = deployContextFor(getSite(siteId));
+    if (dc) {
+      mergedInput.scaffoldSummary = dc.summary;
+      mergedInput.scaffoldFacts = dc.facts;
+      ctxMerge.siteContext = (ctxMerge.siteContext || '') + ' ' + dc.summary;
+    }
   }
   // 必填校验（含条件必填），避免空输入产出无依据的估算
   const vals: Record<string, any> = mergedInput;
@@ -586,6 +671,11 @@ api.post('/steps/:key/run', async (req: Request, res: Response) => {
       if (!keys.length) return;
       const set = keys.map((k) => `${k}=?`).join(',');
       run(`UPDATE skill_runs SET ${set} WHERE id=?`, [...keys.map((k) => (patch as any)[k]), rid]);
+      emitRun(rid);
+      // 建档步骤完成 → 自动生成站点工程（用户无需再点一次「生成」）
+      if (def.key === 'create' && siteId && (patch as any).status === 'done') {
+        try { generateScaffoldForSite(siteId); } catch { /* 生成失败不影响建档结果 */ }
+      }
     },
     getRun: (rid) => get('SELECT * FROM skill_runs WHERE id=?', [rid]) as RunRow | undefined,
   };
@@ -632,6 +722,7 @@ api.post('/suites/:suite/run', async (req: Request, res: Response) => {
       if (!keys.length) return;
       const set = keys.map((k) => `${k}=?`).join(',');
       run(`UPDATE skill_runs SET ${set} WHERE id=?`, [...keys.map((k) => (patch as any)[k]), rid]);
+      emitRun(rid);
     },
     getRun: (rid) => get('SELECT * FROM skill_runs WHERE id=?', [rid]) as RunRow | undefined,
   };
@@ -647,6 +738,24 @@ api.post('/suites/:suite/run', async (req: Request, res: Response) => {
   });
 
   res.json({ ok: true, runId: id, suite: suiteSlug, task: taskKey, siteId: siteId || '' });
+});
+
+/** Server-Sent Events：执行状态实时推送（前端据此更新进度，成功后自动停止轮询） */
+api.get('/runs/events', (req: Request, res: Response) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.write(':ready\n\n');
+  const ping = setInterval(() => res.write(':ping\n\n'), 20000);
+  const onEvt = (evt: any) => res.write(`data: ${JSON.stringify(evt)}\n\n`);
+  runEvents.on('run', onEvt);
+  req.on('close', () => {
+    clearInterval(ping);
+    runEvents.off('run', onEvt);
+  });
 });
 
 /** 执行历史（支持按站点 / 套件过滤） */
@@ -689,7 +798,7 @@ api.get('/sites', (_req: Request, res: Response) => {
       [s.id],
     ) as any[];
     const doneTasks = new Set(runs.map((r) => r.task));
-    return { ...s, profile: safeJson(s.profile_json), doneTasks: [...doneTasks] };
+    return { ...s, profile: safeJson(s.profile_json), research: safeJson(s.profile_json)?.research || null, doneTasks: [...doneTasks] };
   });
   res.json({ ok: true, sites: sitesWithProgress });
 });
@@ -699,18 +808,52 @@ api.post('/sites', (req: Request, res: Response) => {
   const b = req.body || {};
   const name = String(b.name || '').trim();
   if (!name) return res.status(400).json({ ok: false, error: '请填写站点名' });
+  const researchId = String(b.researchId || '').trim();
+  // 把调研结论自动带入建站：作为站点档案的一部分，也参与建档的默认定位
+  const research = researchSummaryFor(researchId);
+  let positioning = String(b.positioning || '').trim();
+  if (research && !positioning) {
+    positioning = research.verdict
+      ? `调研结论：${research.verdict}` +
+        (research.topKeywords.length ? `。建议优先做的长尾词：${research.topKeywords.join('、')}` : '')
+      : '';
+  }
   const id = createSite({
     name,
     domain: String(b.domain || '').trim(),
     region: String(b.region || '').trim(),
-    positioning: String(b.positioning || '').trim(),
+    positioning,
     language: String(b.language || '').trim(),
     siteType: String(b.siteType || '').trim(),
-    researchId: String(b.researchId || '').trim(),
+    monetization: String(b.monetization || '').trim(),
+    price: String(b.price || '').trim(),
+    researchId,
   });
+  if (research) {
+    setSiteProfile(id, JSON.stringify({ research }));
+  }
   const site = getSite(id);
-  res.json({ ok: true, site: { ...site, profile: safeJson(site.profile_json) } });
+  res.json({ ok: true, site: { ...site, profile: safeJson(site.profile_json), research } });
 });
+
+/** 从调研任务（jobs 表的 analysis）提取结论摘要，用于建站上下文与建档默认值 */
+function researchSummaryFor(jobId: string): any | null {
+  if (!jobId) return null;
+  const job = get('SELECT id, seed, status, analysis FROM jobs WHERE id=?', [jobId]) as any;
+  if (!job) return null;
+  const analysis = safeJson(job.analysis);
+  const longtail = Array.isArray(analysis?.longtail) ? analysis.longtail : [];
+  const topKeywords = longtail.slice(0, 8).map((l: any) => l?.keyword).filter(Boolean);
+  return {
+    id: job.id,
+    seed: job.seed || '',
+    verdict: analysis?.verdict || '',
+    score: analysis?.worth_score ?? null,
+    difficulty: analysis?.difficulty ?? null,
+    kdroi: analysis?.kdroi ?? null,
+    topKeywords,
+  };
+}
 
 /** 站点详情（含其下执行记录，按步骤分组） */
 api.get('/sites/:id', (req: Request, res: Response) => {
@@ -720,7 +863,7 @@ api.get('/sites/:id', (req: Request, res: Response) => {
   const doneTasks = new Set(runs.filter((r) => r.status === 'done').map((r) => r.task));
   res.json({
     ok: true,
-    site: { ...s, profile: safeJson(s.profile_json), doneTasks: [...doneTasks] },
+    site: { ...s, profile: safeJson(s.profile_json), research: safeJson(s.profile_json)?.research || null, doneTasks: [...doneTasks] },
     runs: runs.map((r: any) => ({
       id: r.id,
       suite: r.suite,
@@ -741,7 +884,7 @@ api.patch('/sites/:id', (req: Request, res: Response) => {
   if (!s) return res.status(404).json({ ok: false, error: '站点不存在' });
   const b = req.body || {};
   const patch: Record<string, any> = {};
-  for (const k of ['name', 'domain', 'region', 'positioning', 'language', 'site_type', 'research_id']) {
+  for (const k of ['name', 'domain', 'region', 'positioning', 'language', 'site_type', 'research_id', 'monetization', 'price']) {
     if (b[k] !== undefined) patch[k] = String(b[k]);
   }
   if (b.profile_json !== undefined) patch.profile_json = String(b.profile_json);
@@ -766,6 +909,205 @@ api.post('/sites/:id/profile-from-run', (req: Request, res: Response) => {
   setSiteProfile(s.id, String(r.output_json || '{}'));
   const updated = getSite(s.id);
   res.json({ ok: true, site: { ...updated, profile: safeJson(updated.profile_json) } });
+});
+
+/** ============ 站点工程：把建议变成可下载、可部署的真实静态站点 ============ */
+const SITES_DIR = path.join(DATA_DIR, 'sites');
+const CT: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+  '.toml': 'text/plain; charset=utf-8',
+};
+
+function scaffoldDir(siteId: string): string {
+  return path.join(SITES_DIR, String(siteId).replace(/[^a-zA-Z0-9_-]/g, ''), 'site');
+}
+
+/** 递归列出站点工程文件（相对路径 + 大小） */
+function listScaffold(dir: string, base = ''): { path: string; size: number; mtime: string }[] {
+  const out: { path: string; size: number; mtime: string }[] = [];
+  if (!fs.existsSync(dir)) return out;
+  for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, f.name);
+    const rel = base ? `${base}/${f.name}` : f.name;
+    if (f.isDirectory()) out.push(...listScaffold(full, rel));
+    else {
+      const st = fs.statSync(full);
+      out.push({ path: rel, size: st.size, mtime: st.mtime.toISOString() });
+    }
+  }
+  return out.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** 生成 / 重新生成站点工程。数据来源：站点档案（含建档产物 + 调研结论），缺失则回退到最近一次 create-site 产物 */
+function generateScaffoldForSite(siteId: string): { ok: boolean; error?: string; dir?: string; pages?: ScaffoldPage[]; files?: any[] } {
+  const site = getSite(siteId);
+  if (!site) return { ok: false, error: '站点不存在' };
+
+  const profile = safeJson(site.profile_json || '{}');
+  if (!profile || !Object.keys(profile).length) {
+    // 用户可能只建了档没跑「创建站点」：尝试用最近一次 create-site 产物补齐
+    const last = get(
+      "SELECT output_json FROM skill_runs WHERE site_id=? AND task='create-site' AND status='done' ORDER BY created_at DESC LIMIT 1",
+      [site.id],
+    ) as any;
+    if (last?.output_json) Object.assign(profile, safeJson(last.output_json));
+  }
+
+  const research = profile.research || researchSummaryFor(site.research_id || '');
+  const built = buildScaffold({ site, profile, research });
+
+  const dir = scaffoldDir(site.id);
+  fs.mkdirSync(dir, { recursive: true });
+  for (const f of built.files) {
+    const full = path.join(dir, f.path);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, f.content, 'utf-8');
+  }
+  fs.writeFileSync(
+    path.join(dir, '.studio-meta.json'),
+    JSON.stringify({ siteId: site.id, generatedAt: new Date().toISOString(), pages: built.pages.length }, null, 2),
+    'utf-8',
+  );
+
+  return { ok: true, dir: path.relative(process.cwd(), dir), pages: built.pages, files: listScaffold(dir) };
+}
+
+api.post('/sites/:id/scaffold', (req: Request, res: Response) => {
+  const r = generateScaffoldForSite(req.params.id);
+  if (!r.ok) return res.status(404).json(r);
+  res.json(r);
+});
+
+/** 读取已生成的站点工程清单 */
+api.get('/sites/:id/scaffold', (req: Request, res: Response) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ ok: false, error: '站点不存在' });
+  const dir = scaffoldDir(site.id);
+  const files = listScaffold(dir);
+  let meta: any = null;
+  try { meta = JSON.parse(fs.readFileSync(path.join(dir, '.studio-meta.json'), 'utf-8')); } catch { /* 未生成 */ }
+  res.json({ ok: true, generated: files.length > 0, meta, files: files.filter((f) => !f.path.startsWith('.')) });
+});
+
+/** 部署清单：把「生成的站点工程」变成可执行的部署步骤（不依赖模型，纯确定性检查） */
+api.get('/sites/:id/deploy', (req: Request, res: Response) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ ok: false, error: '站点不存在' });
+  const dir = scaffoldDir(site.id);
+  const files = listScaffold(dir).filter((f) => !f.path.startsWith('.'));
+  const has = (p: string) => files.some((f) => f.path === p);
+
+  // 扫描待替换占位：教用户「上线前必须改这几处」
+  const patterns: { key: string; label: string; re: RegExp }[] = [
+    { key: 'todo', label: '[待补充] 正文占位', re: /\[待补充[^\]]*\]/g },
+    { key: 'adsense', label: 'AdSense ID（ca-pub-…）', re: /ca-pub-X{16}/g },
+    { key: 'domain', label: '示例域名 example.com', re: /example\.com/g },
+  ];
+  const placeholders: { key: string; label: string; total: number; files: { path: string; count: number }[] }[] = [];
+  for (const p of patterns) {
+    const hits: { path: string; count: number }[] = [];
+    let total = 0;
+    for (const f of files) {
+      try {
+        const txt = fs.readFileSync(path.join(dir, f.path), 'utf-8');
+        const n = (txt.match(p.re) || []).length;
+        if (n) { hits.push({ path: f.path, count: n }); total += n; }
+      } catch { /* 跳过不可读文件 */ }
+    }
+    placeholders.push({ key: p.key, label: p.label, total, files: hits.slice(0, 8) });
+  }
+
+  const domain = String(site.domain || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const domainConfigured = !!domain && !/example\.com/i.test(domain);
+  const mon = String(site.monetization || '');
+  const needsPricing = /订阅|买断|Freemium|免费增值|混合/.test(mon);
+  const needsAds = /广告|AdSense/i.test(mon);
+  const adTodo = placeholders.find((p) => p.key === 'adsense')?.total || 0;
+  const todoTodo = placeholders.find((p) => p.key === 'todo')?.total || 0;
+  const domainTodo = placeholders.find((p) => p.key === 'domain')?.total || 0;
+
+  let meta: any = null;
+  try { meta = JSON.parse(fs.readFileSync(path.join(dir, '.studio-meta.json'), 'utf-8')); } catch { /* 未生成 */ }
+
+  const checklist = [
+    { key: 'scaffold', label: '已生成站点工程', done: files.length > 0, detail: files.length ? `${files.length} 个文件` : '去上方点「生成站点工程」' },
+    { key: 'domain', label: '已填写真实域名', done: domainConfigured, detail: domainConfigured ? domain : '建档里补上域名后重新生成' },
+    { key: 'copy', label: '正文占位已替换', done: files.length > 0 && todoTodo === 0, detail: todoTodo ? `还有 ${todoTodo} 处 [待补充]` : '无占位' },
+    { key: 'seo', label: 'sitemap / robots / llms.txt 齐全', done: has('sitemap.xml') && has('robots.txt') && has('llms.txt'), detail: '自动生成' },
+    { key: 'legal', label: '隐私政策 / 服务条款 已就位', done: has('privacy.html') && has('terms.html'), detail: '上线前面向地区合规必需' },
+    { key: 'pricing', label: needsPricing ? '定价页已生成' : '定价页（当前模式不需要）', done: !needsPricing || has('pricing.html'), detail: needsPricing ? mon : '收费模式为免费/暂不变现' },
+    { key: 'ads', label: needsAds ? 'AdSense ID 已替换' : '广告位（当前模式不投放）', done: !needsAds || (adTodo === 0 && files.length > 0), detail: needsAds ? (adTodo ? `还有 ${adTodo} 处 ca-pub-X…` : '已替换') : '无广告位' },
+    { key: 'domainRefs', label: 'canonical / sitemap 域名已同步', done: files.length > 0 && domainTodo === 0, detail: domainTodo ? `还有 ${domainTodo} 处 example.com` : '已同步' },
+  ];
+
+  const platform = /netlify/i.test(String(req.query.platform || '')) ? 'netlify' : /vercel/i.test(String(req.query.platform || '')) ? 'vercel' : 'cloudflare';
+  const cmd = platform === 'netlify'
+    ? 'netlify deploy --prod --dir=.'
+    : platform === 'vercel'
+      ? 'vercel --prod'
+      : `wrangler pages deploy . --project-name=${String(site.name || 'site').toLowerCase().replace(/[^a-z0-9-]+/g, '-')}`;
+
+  const sitemapUrl = domainConfigured ? `https://${domain}/sitemap.xml` : '';
+  res.json({
+    ok: true,
+    generated: files.length > 0,
+    meta,
+    pages: meta?.pages || 0,
+    domain,
+    domainConfigured,
+    platform,
+    command: cmd,
+    sitemapUrl,
+    gscUrl: domainConfigured ? `https://search.google.com/search-console/sitemaps?resource_id=${encodeURIComponent('sc-domain:' + domain)}` : 'https://search.google.com/search-console',
+    bingUrl: domainConfigured ? `https://www.bing.com/webmasters/sitemaps?siteUrl=${encodeURIComponent('https://' + domain + '/')}` : 'https://www.bing.com/webmasters',
+    siteUrl: domainConfigured ? `https://${domain}` : '',
+    checklist,
+    placeholders,
+    ready: checklist.every((c) => c.done),
+  });
+});
+
+/** 读取单个工程文件内容（文本预览） */
+api.get('/sites/:id/scaffold/file', (req: Request, res: Response) => {
+  const rel = String(req.query.p || '');
+  if (!rel || rel.includes('..')) return res.status(400).json({ ok: false, error: '路径不合法' });
+  const dir = scaffoldDir(req.params.id);
+  const full = path.join(dir, rel);
+  if (!full.startsWith(dir) || !fs.existsSync(full)) return res.status(404).json({ ok: false, error: '文件不存在' });
+  res.type(CT[path.extname(full).toLowerCase()] || 'text/plain; charset=utf-8').send(fs.readFileSync(full, 'utf-8'));
+});
+
+/** 预览：把站点工程当静态站点直接服务（页面里的相对链接与样式都能生效） */
+api.get('/sites/:id/scaffold/static/*', (req: Request, res: Response) => {
+  const rel = String((req.params as any)[0] || 'index.html');
+  if (rel.includes('..')) return res.status(400).end();
+  const dir = scaffoldDir(req.params.id);
+  const full = path.join(dir, rel);
+  if (!full.startsWith(dir) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) {
+    return res.status(404).type('text/html; charset=utf-8').send('not found');
+  }
+  res.type(CT[path.extname(full).toLowerCase()] || 'application/octet-stream').send(fs.readFileSync(full));
+});
+
+/** 下载整站 zip */
+api.get('/sites/:id/scaffold.zip', (req: Request, res: Response) => {
+  const site = getSite(req.params.id);
+  if (!site) return res.status(404).json({ ok: false, error: '站点不存在' });
+  const dir = scaffoldDir(site.id);
+  const files = listScaffold(dir).filter((f) => !f.path.startsWith('.'));
+  if (!files.length) return res.status(404).json({ ok: false, error: '尚未生成站点工程，请先点击「生成站点工程」' });
+  const entries = files.map((f) => ({ name: f.path, content: fs.readFileSync(path.join(dir, f.path)) }));
+  const zip = createZip(entries);
+  const name = String(site.name || 'site').replace(/[^\w\u4e00-\u9fa5-]+/g, '-');
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(name)}-site.zip"`);
+  res.send(zip);
 });
 
 /** 单次执行详情（含产物） */

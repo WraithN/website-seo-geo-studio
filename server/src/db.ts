@@ -107,9 +107,15 @@ CREATE TABLE IF NOT EXISTS sites (
   site_type TEXT NOT NULL DEFAULT '',
   profile_json TEXT DEFAULT '{}',
   research_id TEXT DEFAULT '',
+  monetization TEXT NOT NULL DEFAULT '',
+  price TEXT NOT NULL DEFAULT '',
   created_at TEXT DEFAULT (datetime('now'))
 );
 `);
+
+// 增量迁移：老库补「收费模式」相关列
+ensureColumn('sites', 'monetization', "TEXT NOT NULL DEFAULT ''");
+ensureColumn('sites', 'price', "TEXT NOT NULL DEFAULT ''");
 
 export interface SiteInput {
   name: string;
@@ -118,6 +124,8 @@ export interface SiteInput {
   positioning?: string;
   language?: string;
   siteType?: string;
+  monetization?: string;
+  price?: string;
   researchId?: string;
 }
 
@@ -125,7 +133,7 @@ export interface SiteInput {
 export function createSite(f: SiteInput): string {
   const id = crypto.randomUUID().slice(0, 12);
   run(
-    `INSERT INTO sites (id,name,domain,region,positioning,language,site_type,research_id) VALUES (?,?,?,?,?,?,?,?)`,
+    `INSERT INTO sites (id,name,domain,region,positioning,language,site_type,monetization,price,research_id) VALUES (?,?,?,?,?,?,?,?,?,?)`,
     [
       id,
       f.name || '未命名站点',
@@ -134,6 +142,8 @@ export function createSite(f: SiteInput): string {
       f.positioning || '',
       f.language || '英语',
       f.siteType || '',
+      f.monetization || '免费 + 广告（AdSense）',
+      f.price || '',
       f.researchId || '',
     ],
   );

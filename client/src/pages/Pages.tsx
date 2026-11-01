@@ -58,17 +58,17 @@ export default function Pages() {
   return (
     <>
       <section className="hero">
-        <div className="kicker">PAGES · 按流程链条排序</div>
-        <h1>建站 <span className="hl">页面库</span></h1>
+        <div className="kicker">LEGACY PAGES · 旧版页面归档</div>
+        <h1>旧版建站 <span className="hl">页面归档</span></h1>
         <p className="hero-sub">
-          页面已随工程入库，按「需求调研 → 新建独立站产品 → 创建站点 → 内容生产 → SEO/合规优化 → 技术SEO → 部署上线 → … → 监控闭环」的
-          12 步增长流程排序，点击即可在右侧实时预览。
+          这些是早期版本的原始页面，仅供参考与在线预览，<b>不属于当前「9 步增长流程」的主路径</b>。
+          正式执行请到「我的站点」推进。
         </p>
       </section>
 
       <div className="grid cols-2">
         <div>
-          <Section title="增长流程（1 → 12）" items={flow} />
+          <Section title="旧版流程页（仅归档）" items={flow} />
           <Section title="工作台" items={bench} />
           <Section title="系统" items={sys} />
         </div>

@@ -8,6 +8,7 @@ dist/
 # runtime data
 data/tessdata/
 data/uploads/
+data/sites/
 data/*.db
 data/*.db-wal
 data/*.db-shm

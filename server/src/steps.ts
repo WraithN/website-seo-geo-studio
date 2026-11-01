@@ -48,6 +48,8 @@ export interface StepDef {
   exec: StepExec;
   /** 结果区展示的字段键（顺序即展示顺序） */
   outputs: string[];
+  /** 结果字段的友好中文标签（键 -> 简短标签），前端据此渲染，不再暴露英文字段名 */
+  outputLabels: Record<string, string>;
   /** 后台实际用到的技能套件与 n8n 工作流（仅编排配置页展示） */
   backend: { suites: string[]; workflows: string[]; note?: string };
 }
@@ -67,6 +69,10 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-research', task: 'keyword-evaluate' },
     outputs: ['verdict', 'score', 'rationale', 'kdroi', 'toolsChecked', 'longtail', 'clusters', 'risks', 'nextActions'],
+    outputLabels: {
+      verdict: '结论', score: '值得做评分', rationale: '判断理由', kdroi: '商业价值（kdroi）',
+      toolsChecked: '已验证的免费工具', longtail: '长尾词机会', clusters: '意图簇', risks: '风险', nextActions: '下一步动作',
+    },
     backend: { suites: ['seo-research'], workflows: ['keyword-research'] },
   },
   {
@@ -75,7 +81,7 @@ export const STEP_DEFS: StepDef[] = [
     label: '创建站点',
     phase: '建站',
     group: 'create',
-    goal: '先建档（产品名/域名/面向地区/定位/语言），再产出站点规格与页面矩阵：哥飞式「分门别类罗列」——一个关键词一个页面，规划 TDH、URL 结构、母版模板复用。站点名与域名会自动带入后续步骤。',
+    goal: '先建档（产品名/域名/面向地区/定位/语言/收费模式），再产出站点规格与页面矩阵：一个关键词一个页面，规划 TDH、URL 结构与母版模板；同时给出收费模式、定价套餐与转化路径。这一步完成后会自动生成可下载、可部署的站点工程。',
     inputs: [
       { key: 'siteName', label: '产品名', type: 'text', required: true, placeholder: '如 Rhythm Trainer' },
       { key: 'domain', label: '域名（可选）', type: 'text', placeholder: '如 example.com' },
@@ -83,10 +89,18 @@ export const STEP_DEFS: StepDef[] = [
       { key: 'positioning', label: '产品定位', type: 'textarea', required: true, placeholder: '给谁用、解决什么问题、和竞品的差异（可直接用调研结论）' },
       { key: 'language', label: '站点语言', type: 'select', options: ['英语', '英语+小语种', '中文+英语'], default: '英语' },
       { key: 'siteType', label: '站点类型', type: 'select', options: ['落地页', '博客/内容站', '工具站', '文档站'], default: '工具站' },
+      { key: 'monetization', label: '收费模式（决定做哪些商业页）', type: 'select', options: ['免费 + 广告（AdSense）', '订阅制（月付/年付）', '一次性买断', '免费增值（Freemium）', '联盟营销', '混合（订阅 + 广告）', '暂不变现'], default: '免费 + 广告（AdSense）', hint: '会决定是否需要定价页 / 付费墙 / 广告位规划' },
+      { key: 'price', label: '目标定价（可选）', type: 'text', placeholder: '如 $9/月、$49 一次性' },
       { key: 'requirement', label: '需求描述', type: 'textarea', placeholder: '想做什么站、核心页面有哪些、风格偏好' },
     ],
     exec: { kind: 'skill', suite: 'seo-orchestrator', task: 'create-site' },
-    outputs: ['productProfile', 'targetUsers', 'differentiation', 'complianceScope', 'domainAdvice', 'successMetrics', 'siteSpec', 'pages', 'techStack', 'seoBaseline', 'nextActions'],
+    outputs: ['productProfile', 'targetUsers', 'differentiation', 'monetizationPlan', 'pricingTiers', 'complianceScope', 'domainAdvice', 'successMetrics', 'siteSpec', 'pages', 'techStack', 'seoBaseline', 'nextActions'],
+    outputLabels: {
+      productProfile: '产品档案', targetUsers: '目标用户', differentiation: '差异化要点',
+      monetizationPlan: '收费模式与变现路径', pricingTiers: '定价套餐', complianceScope: '合规范围',
+      domainAdvice: '域名建议', successMetrics: '成功指标', siteSpec: '站点规格', pages: '页面清单',
+      techStack: '技术选型', seoBaseline: 'SEO 基线', nextActions: '下一步动作',
+    },
     backend: {
       suites: ['seo-orchestrator', 'seo-technical'],
       workflows: ['n8n-workflow-create', 'n8n-workflow-site-tool'],
@@ -96,10 +110,10 @@ export const STEP_DEFS: StepDef[] = [
   {
     step: 3,
     key: 'seo',
-    label: 'SEO·GEO 优化',
-    phase: '优化',
+    label: '站点架构规划',
+    phase: '架构',
     group: 'create',
-    goal: '上线前规划「一个关键词一个页面」的 SEO/GEO 架构：关键词→页面映射、分门别类罗列、内链骨架、meta/llms.txt 模板、答案块规划。不依赖正文，给第 6 步内容生产当蓝图。',
+    goal: '写内容前的蓝图：关键词→页面映射（一个词一个页面）、内链骨架、title/description 模板、llms.txt 结构与 AI 可引用答案块。这一步只决定「做哪些页面、每页打什么词」，不写正文。',
     inputs: [
       { key: 'topic', label: '核心主题/产品', type: 'text', placeholder: '如 chinese name generator', hint: '可留空，自动带入建档信息' },
       { key: 'siteName', label: '站点/产品名', type: 'text', placeholder: '如 MandarinName' },
@@ -108,10 +122,14 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-content-geo', task: 'geo-optimize' },
     outputs: ['pageMap', 'internalLinkSkeleton', 'metaTemplate', 'llmsTxtStructure', 'answerBlockPlan', 'checklist'],
+    outputLabels: {
+      pageMap: '关键词→页面映射', internalLinkSkeleton: '内链骨架', metaTemplate: '标题/描述模板',
+      llmsTxtStructure: 'llms.txt 结构', answerBlockPlan: '答案块规划', checklist: '验收清单',
+    },
     backend: { suites: ['seo-content-geo'], workflows: [] },
   },
   {
-    step: 4,
+    step: 5,
     key: 'compliance',
     label: '合规优化',
     phase: '合规',
@@ -125,10 +143,14 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-technical', task: 'compliance-check' },
     outputs: ['applicableLaws', 'mustHave', 'cookieConsent', 'privacyPolicyOutline', 'dataProcessing', 'accessibility', 'marketingRules', 'riskLevel', 'checklist'],
+    outputLabels: {
+      applicableLaws: '适用法规', mustHave: '必备合规件', cookieConsent: 'Cookie 同意方案', privacyPolicyOutline: '隐私政策大纲',
+      dataProcessing: '数据处理要求', accessibility: '无障碍要求', marketingRules: '营销规则', riskLevel: '风险等级', checklist: '合规清单',
+    },
     backend: { suites: ['seo-technical'], workflows: [], note: '合规结论同时回写产品档案的 complianceScope' },
   },
   {
-    step: 5,
+    step: 6,
     key: 'techseo',
     label: '技术SEO·GEO',
     phase: '技术',
@@ -141,15 +163,19 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-technical', task: 'audit' },
     outputs: ['facts', 'findings', 'scorecard', 'quickWins', 'structuredDataPlan', 'robotsTxt', 'sitemapXml', 'llmsTxt'],
+    outputLabels: {
+      facts: '抓取事实', findings: '问题清单', scorecard: '分项评分', quickWins: '快速修复',
+      structuredDataPlan: '结构化数据', robotsTxt: 'robots.txt', sitemapXml: 'sitemap.xml', llmsTxt: 'llms.txt',
+    },
     backend: { suites: ['seo-technical'], workflows: ['techseo'] },
   },
   {
-    step: 6,
+    step: 4,
     key: 'content',
     label: '内容生产',
     phase: '内容',
     group: 'create',
-    goal: '四阶段流水线：① 生成 blog 规划（支柱页/集群/编辑日历/页面清单）→ ② 内容生产（带论文与权威博客引用的成稿，需人工补的用 [待人工补充：…] 标识）→ ③ 去AI味（改写为自然、有细节与人称声音）→ ④ EEAT 验证（经验/专业/权威/可信四维评分与缺口）。',
+    goal: '按上一步的页面蓝图逐页写稿，产出可直接发布的正文（标题/大纲/要点/内链/FAQ），再走「去AI味 → EEAT 自检」。一个关键词一个页面；需人工补的用 [待人工补充：…] 标识。',
     inputs: [
       { key: 'topic', label: '主题/目标词', type: 'text', required: true, placeholder: '如 chinese names for boys' },
       { key: 'intent', label: '意图', type: 'select', options: ['信息', '商业', '交易', '导航'], default: '信息' },
@@ -161,6 +187,9 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-content-geo', task: 'content-pipeline' },
     outputs: ['blogPlan', 'draft', 'citations', 'humanized', 'eeatReport', 'checklist'],
+    outputLabels: {
+      blogPlan: '博客规划', draft: '成稿（初稿）', citations: '引用清单', humanized: '去AI味稿', eeatReport: 'EEAT 评分', checklist: '发布前核对',
+    },
     backend: { suites: ['seo-content-geo'], workflows: ['content-gen'] },
   },
   {
@@ -177,6 +206,9 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-technical', task: 'deploy-plan' },
     outputs: ['preLaunch', 'deploySteps', 'postLaunch', 'indexingPlan', 'risks'],
+    outputLabels: {
+      preLaunch: '上线前检查', deploySteps: '部署步骤', postLaunch: '上线后动作', indexingPlan: '收录推进', risks: '风险与回滚',
+    },
     backend: { suites: ['seo-technical'], workflows: ['n8n-workflow-deploy'] },
   },
   {
@@ -192,6 +224,7 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-research', task: 'link-prospecting' },
     outputs: ['queries', 'opportunities', 'note'],
+    outputLabels: { queries: '查询词', opportunities: '外链机会', note: '提醒' },
     backend: { suites: ['seo-research'], workflows: ['backlink'] },
   },
   {
@@ -208,9 +241,16 @@ export const STEP_DEFS: StepDef[] = [
     ],
     exec: { kind: 'skill', suite: 'seo-monitor', task: 'gsc-monitor' },
     outputs: ['checklist', 'strikingDistance', 'cannibalization', 'healthSignals', 'alerts', 'actions'],
+    outputLabels: {
+      checklist: 'GSC 检查项', strikingDistance: '临近排名机会', cannibalization: '自相残杀检测',
+      healthSignals: '站点健康度', alerts: '告警配置', actions: '本周期动作',
+    },
     backend: { suites: ['seo-monitor'], workflows: ['monitor'] },
   },
 ];
+
+// 以 step 为唯一顺序，前端 /steps 与 /flow 永远一致。
+STEP_DEFS.sort((a, b) => a.step - b.step);
 
 export function findStepDef(key: string): StepDef | undefined {
   return STEP_DEFS.find((s) => s.key === key);

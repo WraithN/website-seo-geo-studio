@@ -1,5 +1,6 @@
-import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { Routes, Route, NavLink } from 'react-router-dom';
+import { activeRunCount, resumeRunning, subscribeRuns } from './runStore';
 import Dashboard from './pages/Dashboard';
 import Skills from './pages/Skills';
 import SkillDetail from './pages/SkillDetail';
@@ -16,31 +17,39 @@ import History from './pages/History';
 import Orchestration from './pages/Orchestration';
 import Artifacts from './pages/Artifacts';
 
-export default function App() {
-  const navigate = useNavigate();
+// 侧边栏信息架构（面向「出海运营 + 小白开发」，而不是面向资产类型）：
+// 主路径只要「概览 / 需求调研 / 我的站点」三样；技能、n8n、页面库、产物归档等
+// 属于实现细节，收进可折叠的「高级工具」区，不打扰主流程。
+const MAIN_NAV = [
+  {
+    group: '工作台',
+    items: [{ to: '/', label: '概览', end: true }],
+  },
+  {
+    group: '产品',
+    items: [
+      { to: '/research', label: '需求调研' },
+      { to: '/sites', label: '我的站点' },
+    ],
+  },
+];
 
-  // 侧边栏：需求调研（立项）→ 站点（建站容器）→ 资源 / 设置。
-  // 具体的 8 步流程收在每个站点内部（/sites/:id），不再在侧边栏逐条列出。
-  const nav = [
-    { group: '工作台', items: [{ to: '/', label: '概览', end: true }] },
-    { group: '立项', items: [{ to: '/research', label: '需求调研' }] },
-    { group: '站点', items: [{ to: '/sites', label: '站点列表' }] },
-    {
-      group: '资源',
-      items: [
-        { to: '/history', label: '历史结果' },
-        { to: '/workflows', label: 'n8n 工作流' },
-        { to: '/skills', label: '技能' },
-      ],
-    },
-    {
-      group: '设置',
-      items: [
-        { to: '/settings', label: '通用设置' },
-        { to: '/settings/orchestration', label: '流程编排' },
-      ],
-    },
-  ];
+const ADVANCED_ITEMS = [
+  { to: '/run', label: '技能执行', desc: '手动调用单个技能' },
+  { to: '/history', label: '历史结果', desc: '所有执行记录与产物' },
+  { to: '/skills', label: '技能库', desc: '查看 SKILL.md 全文' },
+  { to: '/workflows', label: 'n8n 工作流', desc: '工作流资产与节点' },
+  { to: '/pages', label: '建站页面', desc: '旧版页面归档预览' },
+  { to: '/artifacts', label: '产物归档', desc: '落盘的 JSON / MD' },
+];
+
+const SETTINGS_NAV = [
+  { to: '/settings', label: '通用设置' },
+  { to: '/settings/orchestration', label: '流程编排' },
+];
+
+export default function App() {
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
     <div className="app">
@@ -49,18 +58,48 @@ export default function App() {
           <span className="sb-dot" />
           <div className="sb-name">SEO/GEO Studio<small>流量获客工作室</small></div>
         </div>
-        {nav.map((g) => (
+
+        {MAIN_NAV.map((g) => (
           <div key={g.group}>
             <div className="sb-group">{g.group}</div>
             {g.items.map((it: any) => (
-              <NavLink key={it.to} to={it.to} end={(it as any).end} className="sb-link">
-                {it.num && <span className="sb-num">{it.num}</span>}
+              <NavLink key={it.to} to={it.to} end={!!it.end} className="sb-link">
                 {it.label}
               </NavLink>
             ))}
           </div>
         ))}
+
+        <div className="sb-group">
+          高级工具
+          <button
+            className="sb-fold"
+            onClick={() => setAdvancedOpen((v) => !v)}
+            title={advancedOpen ? '收起' : '展开'}
+          >
+            {advancedOpen ? '收起 ▾' : '展开 ▸'}
+          </button>
+        </div>
+        {advancedOpen && (
+          <div className="sb-advanced">
+            {ADVANCED_ITEMS.map((it) => (
+              <NavLink key={it.to} to={it.to} className="sb-link sb-link-sub">
+                {it.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+
+        <div className="sb-group">设置</div>
+        {SETTINGS_NAV.map((it) => (
+          <NavLink key={it.to} to={it.to} className="sb-link">
+            {it.label}
+          </NavLink>
+        ))}
+
+        <RunIndicator />
       </aside>
+
       <main className="main">
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -84,5 +123,21 @@ export default function App() {
         </Routes>
       </main>
     </div>
+  );
+}
+
+/** 侧边栏底部「执行中」指示：基于全局运行状态，跨页面可见 */
+function RunIndicator() {
+  const [, force] = useState(0);
+  useEffect(() => {
+    resumeRunning();
+    return subscribeRuns(() => force((n) => n + 1));
+  }, []);
+  const n = activeRunCount();
+  if (n === 0) return null;
+  return (
+    <NavLink to="/history" className="sb-runind" title="去历史结果查看">
+      ⏳ {n} 个任务执行中
+    </NavLink>
   );
 }

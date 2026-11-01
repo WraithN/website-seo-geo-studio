@@ -100,9 +100,17 @@ export default function Research() {
 
   const goCreateSite = () => {
     const name = (job?.seed || seed || '未命名站点').trim();
+    // 把调研结论（是否值得做 + 推荐长尾词 + 任务 id）一起带给建站，避免只传一个站点名
+    const analysis = safeParse<any>(job?.analysis);
+    const verdict = analysis?.verdict || '';
+    const topKeywords = (analysis?.longtail || []).slice(0, 8).map((l: any) => l?.keyword).filter(Boolean);
+    const positioning = verdict
+      ? `调研结论：${verdict}` + (topKeywords.length ? `。建议优先做的长尾词：${topKeywords.join('、')}` : '')
+      : '';
+    try {
+      localStorage.setItem('pendingSite', JSON.stringify({ name, researchId: job?.id || jobId || '', positioning }));
+    } catch { /* 忽略 */ }
     window.location.hash = '#/sites';
-    // 预填站点名：把当前种子词作为默认站点名写入 localStorage，站点页创建表单读取
-    try { localStorage.setItem('pendingSiteName', name); } catch { /* 忽略 */ }
   };
 
   return (
@@ -148,31 +156,36 @@ export default function Research() {
               </div>
             </div>
 
-            <div className="field full">
-              <label>截图辅助分析（Similarweb / Semrush 指标面板，可选）</label>
-              <div className="upload" onClick={() => document.getElementById('shots')!.click()}>
-                点击选择截图（最多 3 张）——登录 Similarweb / Semrush 后截图月访问、跳出率、流量结构等面板，自动提取指标参与分析
-              </div>
-              <input id="shots" type="file" accept="image/*" multiple hidden onChange={onPick} />
-              <div className="thumbs">
-                {shots.map((s, i) => (
-                  <div key={i} className="thumb">
-                    <img src={s.data_url} alt={s.name} />
-                    <button type="button" onClick={() => setShots((a) => a.filter((_, j) => j !== i))}>×</button>
+            <details className="step-params" style={{ marginTop: 4 }}>
+              <summary>选填：叠加 Similarweb / Semrush 真实指标（让结论更准）</summary>
+              <div style={{ marginTop: 12 }}>
+                <div className="field full">
+                  <label>截图辅助分析（可选）</label>
+                  <div className="upload" onClick={() => document.getElementById('shots')!.click()}>
+                    点击选择截图（最多 3 张）——登录 Similarweb / Semrush 后截图月访问、跳出率、流量结构等面板，自动提取指标参与分析
                   </div>
-                ))}
-              </div>
-              <div className="hint">未配置视觉模型时截图仅存档，请改用下方手填指标。</div>
-            </div>
+                  <input id="shots" type="file" accept="image/*" multiple hidden onChange={onPick} />
+                  <div className="thumbs">
+                    {shots.map((s, i) => (
+                      <div key={i} className="thumb">
+                        <img src={s.data_url} alt={s.name} />
+                        <button type="button" onClick={() => setShots((a) => a.filter((_, j) => j !== i))}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hint">未配置视觉模型时截图仅存档，请改用手填指标。</div>
+                </div>
 
-            <div className="grid2">
-              <div className="field"><label>月访问量（手填）</label><input type="number" min="0" value={mVisits} onChange={(e) => setMVisits(e.target.value)} placeholder="如 120000" /></div>
-              <div className="field"><label>跳出率 %</label><input type="number" min="0" max="100" step="0.1" value={mBounce} onChange={(e) => setMBounce(e.target.value)} placeholder="如 42" /></div>
-            </div>
-            <div className="grid2">
-              <div className="field"><label>人均页数</label><input type="number" min="0" step="0.1" value={mPages} onChange={(e) => setMPages(e.target.value)} placeholder="如 2.4" /></div>
-              <div className="field"><label>平均停留（秒）</label><input type="number" min="0" value={mDur} onChange={(e) => setMDur(e.target.value)} placeholder="如 145" /></div>
-            </div>
+                <div className="grid2">
+                  <div className="field"><label>月访问量（手填）</label><input type="number" min="0" value={mVisits} onChange={(e) => setMVisits(e.target.value)} placeholder="如 120000" /></div>
+                  <div className="field"><label>跳出率 %</label><input type="number" min="0" max="100" step="0.1" value={mBounce} onChange={(e) => setMBounce(e.target.value)} placeholder="如 42" /></div>
+                </div>
+                <div className="grid2">
+                  <div className="field"><label>人均页数</label><input type="number" min="0" step="0.1" value={mPages} onChange={(e) => setMPages(e.target.value)} placeholder="如 2.4" /></div>
+                  <div className="field"><label>平均停留（秒）</label><input type="number" min="0" value={mDur} onChange={(e) => setMDur(e.target.value)} placeholder="如 145" /></div>
+                </div>
+              </div>
+            </details>
 
             <div style={{ marginTop: 16 }} className="row">
               <button className="btn" type="submit" disabled={submitting}>开始需求调研 →</button>

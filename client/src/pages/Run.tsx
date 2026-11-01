@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getJSON, postJSON } from '../api';
+import { fieldLabel, colLabel } from '../labels';
 
 interface Field {
   key: string;
@@ -418,6 +419,15 @@ export function EeatReport({ r }: { r: any }) {
   );
 }
 
+/** 结论横幅：把「✅ 值得做 / 🟡 可尝试 / 🔴 暂不优先」渲染成醒目决策卡 */
+function VerdictBanner({ text }: { text: string }) {
+  const tone = /✅|值得做/.test(text) ? 'ok'
+    : /🔴|暂不|不值得/.test(text) ? 'err'
+    : /🟡|可尝试|谨慎/.test(text) ? 'warn'
+    : 'info';
+  return <div className={`verdict-banner ${tone}`}>{text}</div>;
+}
+
 export function Artifact({ run }: { run: any }) {
   const out = run.output || {};
   const fields = run.outputFields || {};
@@ -468,21 +478,33 @@ export function Artifact({ run }: { run: any }) {
         </details>
       ) : null}
 
-      {keys.map((k) => (
-        <div className="art-block" key={k}>
-          <div className="art-key">{k}</div>
-          {fields[k] && <div className="art-desc">{fields[k]}</div>}
-          {k === 'eeatReport' ? (
-            <EeatReport r={out[k]} />
-          ) : FILE_FIELDS.has(k) && typeof out[k] === 'string' ? (
-            <FileBlock content={out[k]} fieldKey={k} />
-          ) : MD_FIELDS.has(k) && typeof out[k] === 'string' ? (
-            <Markdownish md={out[k]} />
-          ) : (
-            <Value v={out[k]} />
-          )}
-        </div>
-      ))}
+      {keys.map((k) => {
+        const v = out[k];
+        const label = fieldLabel(k);
+        if (k === 'verdict' && typeof v === 'string') {
+          return (
+            <div className="art-block" key={k}>
+              <div className="art-key">{label}<span className="art-key-en">{k}</span></div>
+              <VerdictBanner text={v} />
+            </div>
+          );
+        }
+        return (
+          <div className="art-block" key={k}>
+            <div className="art-key">{label}<span className="art-key-en">{k}</span></div>
+            {fields[k] && <div className="art-desc">{fields[k]}</div>}
+            {k === 'eeatReport' ? (
+              <EeatReport r={v} />
+            ) : FILE_FIELDS.has(k) && typeof v === 'string' ? (
+              <FileBlock content={v} fieldKey={k} />
+            ) : MD_FIELDS.has(k) && typeof v === 'string' ? (
+              <Markdownish md={v} />
+            ) : (
+              <Value v={v} />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -502,7 +524,7 @@ export function Value({ v }: { v: any }) {
             <thead>
               <tr>
                 {cols.map((c) => (
-                  <th key={c}>{c}</th>
+                  <th key={c}>{colLabel(c)}</th>
                 ))}
               </tr>
             </thead>
@@ -532,7 +554,7 @@ export function Value({ v }: { v: any }) {
       <div className="art-obj">
         {Object.entries(v).map(([k, vv]) => (
           <div className="art-obj-row" key={k}>
-            <b>{k}</b>
+            <b>{colLabel(k)}</b>
             <span>{typeof vv === 'object' ? JSON.stringify(vv) : String(vv)}</span>
           </div>
         ))}

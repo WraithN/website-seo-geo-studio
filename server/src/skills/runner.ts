@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { chatJSON, llmAvailable } from '../llm.js';
 import { collectSignals, fetchPage, extractSeoFacts } from './collect.js';
 import { findTask, type TaskContext, type TaskDef, type SuiteDef } from './registry.js';
-import { DATA_DIR, setSiteProfile } from '../db.js';
+import { DATA_DIR, get, setSiteProfile } from '../db.js';
 import { ocrFile } from '../ocr.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -432,7 +432,12 @@ export async function executeRun(
     // 建档步骤完成 → 把产物写回站点档案，作为后续步骤的统一上下文（取代「引用上一步」）
     if (opts.promoteProfile && opts.siteId) {
       try {
-        setSiteProfile(opts.siteId, JSON.stringify(data));
+        // 保留建档时写入的调研结论（research），不被本次建档产物覆盖
+        const existing = get('SELECT profile_json FROM sites WHERE id=?', [opts.siteId]) as any;
+        let research: any = null;
+        try { research = JSON.parse(existing?.profile_json || '{}').research || null; } catch { /* 忽略 */ }
+        const merged = research ? { ...(data || {}), research } : data;
+        setSiteProfile(opts.siteId, JSON.stringify(merged));
       } catch { /* 写回站点档案失败不影响本次产物 */ }
     }
   } catch (e: any) {

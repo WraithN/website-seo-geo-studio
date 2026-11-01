@@ -2,21 +2,9 @@
 // 与原「本步骤历史结果」小卡片不同，这里按步骤/状态筛选，点开可看产物 MD + 原始输入 + 采集证据。
 import { useEffect, useMemo, useState } from 'react';
 import { getJSON } from '../api';
-import { Artifact, Value } from './Run';
-
-/** 流程任务 → 步骤序号 + 中文名（与 Flow.tsx 的 STEP_TASK / TASK_STEP_LABEL 保持一致） */
-const TASK_META: Record<string, { step: number; label: string }> = {
-  'keyword-evaluate': { step: 1, label: '需求调研' },
-  'create-site': { step: 2, label: '创建站点（含建档）' },
-  'geo-optimize': { step: 3, label: 'SEO·GEO 优化' },
-  'compliance-check': { step: 4, label: '合规优化' },
-  audit: { step: 5, label: '技术SEO·GEO' },
-  'content-brief': { step: 6, label: '内容生产' },
-  'content-pipeline': { step: 6, label: '内容生产' },
-  'deploy-plan': { step: 7, label: '部署上线' },
-  'link-prospecting': { step: 8, label: '外链推广' },
-  'gsc-monitor': { step: 9, label: '线上监控' },
-};
+import { Artifact } from './Run';
+import { colLabel } from '../labels';
+import { loadFlow, taskMeta } from '../flowMeta';
 
 const STATUS_OPTS = [
   { v: '', label: '全部状态' },
@@ -27,6 +15,7 @@ const STATUS_OPTS = [
 
 export default function History() {
   const [runs, setRuns] = useState<any[]>([]);
+  const [meta, setMeta] = useState<Record<string, { step: number; label: string }>>({});
   const [status, setStatus] = useState('');
   const [step, setStep] = useState('');
   const [current, setCurrent] = useState<any>(null);
@@ -42,23 +31,26 @@ export default function History() {
   };
 
   useEffect(load, []);
+  useEffect(() => {
+    loadFlow().then((s) => setMeta(taskMeta(s))).catch(() => {});
+  }, []);
 
   const steps = useMemo(() => {
     const seen: { step: number; label: string }[] = [];
     for (const r of runs) {
-      const m = TASK_META[r.task];
+      const m = meta[r.task];
       if (m && !seen.some((s) => s.step === m.step)) seen.push({ step: m.step, label: m.label });
     }
     return seen.sort((a, b) => a.step - b.step);
-  }, [runs]);
+  }, [runs, meta]);
 
   const filtered = useMemo(() => {
     return runs.filter((r) => {
       if (status && r.status !== status) return false;
-      if (step && TASK_META[r.task]?.step !== Number(step)) return false;
+      if (step && meta[r.task]?.step !== Number(step)) return false;
       return true;
     });
-  }, [runs, status, step]);
+  }, [runs, status, step, meta]);
 
   const open = async (r: any) => {
     setCurrent(null);
@@ -119,7 +111,7 @@ export default function History() {
           ) : (
             <div className="hist">
               {filtered.map((r) => {
-                const m = TASK_META[r.task];
+                const m = meta[r.task];
                 return (
                   <div
                     className={'hist-row' + (current?.id === r.id ? ' active' : '')}
@@ -151,7 +143,7 @@ export default function History() {
             <>
               <div className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0 }}>
-                  {TASK_META[current.task]?.label || current.task}
+                  {meta[current.task]?.label || current.task}
                 </h3>
                 <span className={`pill ${current.status === 'done' ? 'ok' : current.status === 'failed' ? 'err' : ''}`}>
                   {current.status === 'done' ? '已完成' : current.status === 'failed' ? '失败' : '执行中'}
@@ -178,7 +170,7 @@ export default function History() {
                   <div className="art-obj">
                     {Object.entries(current.input || {}).map(([k, v]) => (
                       <div className="art-obj-row" key={k}>
-                        <b>{k}</b>
+                        <b>{colLabel(k)}</b>
                         <span>{typeof v === 'object' ? JSON.stringify(v) : String(v ?? '')}</span>
                       </div>
                     ))}

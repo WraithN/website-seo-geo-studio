@@ -317,7 +317,14 @@ ${JSON.stringify(ctx.pageFacts || {}, null, 2)}
     },
     prompt: (v, ctx) => `为站点制定部署上线计划。
 【站点名】${v.siteName}【域名】${v.domain || '未提供'}【平台】${v.platform || 'Cloudflare Pages'}
-要求：上线前检查清单要具体到可勾选；部署步骤给出实际命令（含 Cloudflare Pages 的 wrangler 示例）；上线后含 GSC/Bing 站长提交、收录推进与监控配置；给出风险与回滚预案。`,
+${v.scaffoldSummary ? `【已生成的站点工程（真实文件清单）】\n${v.scaffoldSummary}` : '（尚未生成站点工程）'}
+${ctx.siteContext ? `【站点上下文】${ctx.siteContext}` : ''}
+要求：
+1. 以「已生成的站点工程」为准：直接说明这个目录怎么部署（命令、输出目录、自定义域名绑定、HTTPS），不要假设需要构建步骤（它是纯静态文件）。
+2. preLaunch 必须包含：替换 ${v.scaffoldSummary && /待补充/.test(String(v.scaffoldSummary)) ? '工程中剩余的 [待补充] 文案' : '[待补充] 文案'}、核对 canonical/sitemap 域名、按收费模式检查定价页与广告位（AdSense ID 是否已替换）。
+3. postLaunch 与 indexingPlan 给出具体可点的动作：提交 sitemap.xml 到 Google Search Console / Bing Webmaster、验证 robots.txt 与 llms.txt 可访问、用 URL 检查工具请求编入索引。
+4. risks 覆盖：域名未解析、占位文案误上线、广告位违规（如放在隐私页）、隐私政策缺失导致拒审。
+5. 不要编造真实部署结果（是否已上线只能写进「待确认」）。`,
   },
 ];
 
@@ -492,12 +499,16 @@ const orchestratorTasks: TaskDef[] = [
       { key: 'positioning', label: '产品定位', type: 'textarea', required: true, placeholder: '给谁用、解决什么问题、和竞品的差异（可直接用调研结论）' },
       { key: 'language', label: '站点语言', type: 'select', options: ['英语', '英语+小语种', '中文+英语'], default: '英语' },
       { key: 'siteType', label: '站点类型', type: 'select', options: ['落地页', '博客/内容站', '工具站', '文档站'], default: '工具站' },
+      { key: 'monetization', label: '收费模式', type: 'select', options: ['免费 + 广告（AdSense）', '订阅制（月付/年付）', '一次性买断', '免费增值（Freemium）', '联盟营销', '混合（订阅 + 广告）', '暂不变现'], default: '免费 + 广告（AdSense）' },
+      { key: 'price', label: '目标定价（可选）', type: 'text', placeholder: '如 $9/月、$49 一次性' },
       { key: 'requirement', label: '需求描述', type: 'textarea', placeholder: '想做什么站、核心页面有哪些、风格偏好' },
     ],
     outputFields: {
       productProfile: '产品档案一段话：做什么、给谁用、核心价值',
       targetUsers: '目标用户画像数组，每项 {segment, pain, trigger}',
       differentiation: '与竞品的差异化要点数组',
+      monetizationPlan: '变现方案：为什么这个收费模式适合它、付费墙/广告位放在哪几个页面、从免费访客到付费的转化路径（3-5 条要点）',
+      pricingTiers: '定价套餐数组，每项 {name, price, billing, features[], bestFor}；若有免费版也列为套餐并标 $0',
       complianceScope: '面向地区带来的合规范围摘要（详细清单在第 4 步合规优化展开）',
       domainAdvice: '域名/命名建议与注意事项',
       successMetrics: '成功指标数组，每项 {metric, target, window}',
@@ -515,11 +526,14 @@ const orchestratorTasks: TaskDef[] = [
 【站点语言】${v.language || '英语'}
 【产品定位】${v.positioning}
 【站点类型】${v.siteType || '未指定'}
+【收费模式】${v.monetization || '未指定'}${v.price ? `（目标定价 ${v.price}）` : ''}
 【需求描述】${v.requirement || '未提供'}
 ${ctx.upstream ? `【上游调研结论】\n${JSON.stringify(ctx.upstream).slice(0, 2500)}` : ''}
 
 要求：
 1. 先建档：产品档案要能直接指导后续建站与内容，目标用户具体到使用场景。
+2. monetizationPlan 必须给出可落地的变现设计：说明为什么选这个收费模式；广告模式下要指出哪些页面放广告位、哪些页面绝不能放（如支付/隐私页）；订阅/买断模式要指出付费墙卡在哪一步、免费额度怎么定；并给出免费→付费的转化路径。定价要参考目标市场购买力，不要凭空编造精确转化率。
+3. pricingTiers 给 2-3 个套餐（含免费版时标 $0），每个套餐列出关键功能差异与适合人群，价格与 billing（月付/年付/一次性）要写清。若用户给了目标定价，围绕它设计。
 2. complianceScope 按面向地区给出合规范围摘要（如欧盟 GDPR 要隐私政策+Cookie 同意+数据处理记录），详细清单留给第 4 步合规优化。
 3. 再出站点规格与页面矩阵，严格遵循哥飞「分门别类罗列」：一个关键词一个页面，相邻长尾词互相内链，规划好 TDH（Title/Description/H1）、URL 结构、母版模板复用。
 4. SEO 基线列出必须满足项（title/meta/结构化数据/性能/llms.txt），作为验收标准。
